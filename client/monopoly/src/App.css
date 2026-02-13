@@ -33,6 +33,15 @@
   gap: 10px;
 }
 
+.form-column { 
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: 10px; 
+  gap: 10px;
+}
+
 .form-row { 
   display: flex; 
   align-items: center; 
@@ -68,4 +77,27 @@
     border: 1px solid black;
     padding: 8px;
     text-align: center;
+}
+
+.container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.item {
+    width: 50%;
+    height: 50%;
+    object-fit: contain;
+}
+
+.item-chose {
+    width: 250px;
+    height: 250px;
+    object-fit: contain;
 }

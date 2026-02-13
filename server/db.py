@@ -10,7 +10,7 @@ connection = pymysql.connect(
 
 try:
     with connection.cursor() as cursor:
-        cursor.execute("CREATE DATABASE IF NOT EXISTS quiz")
+        cursor.execute("CREATE DATABASE IF NOT EXISTS monopoly")
 finally:
     connection.close()
 
@@ -28,8 +28,53 @@ class User(Base):
     name = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
 
-    quizzes = relationship("Quiz", back_populates="creator", cascade="all, delete-orphan")
-    user_scores = relationship("Score", back_populates="user_score", cascade="all, delete-orphan")
+    money = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False)
+    figure = Column(Integer, nullable=False)
+
+    matches_created = relationship(
+        "Match",
+        back_populates="creater",
+        cascade="all, delete",
+        foreign_keys="Match.creater_id"
+    )
+    matches_second = relationship(
+        "Match",
+        back_populates="secondplayer",
+        cascade="all, delete",
+        foreign_keys="Match.secondplayer_id"
+    )
+    matches_third = relationship(
+        "Match",
+        back_populates="thirdplayer",
+        cascade="all, delete",
+        foreign_keys="Match.thirdplayer_id"
+    )
+    matches_fourth = relationship(
+        "Match",
+        back_populates="fourthplayer",
+        cascade="all, delete",
+        foreign_keys="Match.fourthplayer_id"
+    )
+
+
+class Match(Base):
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True)
+
+    creater_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    secondplayer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    thirdplayer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    fourthplayer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+
+    is_active = Column(Integer, nullable=False)
+    winner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    creater = relationship("User", foreign_keys=[creater_id], back_populates="matches_created")
+    secondplayer = relationship("User", foreign_keys=[secondplayer_id], back_populates="matches_second")
+    thirdplayer = relationship("User", foreign_keys=[thirdplayer_id], back_populates="matches_third")
+    fourthplayer = relationship("User", foreign_keys=[fourthplayer_id], back_populates="matches_fourth")
 
 with engine.connect() as conn:
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))

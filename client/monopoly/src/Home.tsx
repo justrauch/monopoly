@@ -38,29 +38,30 @@ class Field {
     }
 }
 
-
 class Position {
     x: number;
     y: number;
-    figures: string[];
+    figure: string;
 
-    constructor(x: number, y: number, figures: string[]) {
+    constructor(x: number, y: number, figure: string) {
         this.x = x;
         this.y = y;
-        this.figures = figures;
+        this.figure = figure;
     }
 }
-
-
 
 export default function App() {
 
     const navigate = useNavigate();
     const [showField, setshowField] = useState<Field>(new Field("", "", 0));
-    const [is_in_Match, setis_in_Match] = useState(true);
-    const [is_in_Search, setis_in_Search] = useState(true);
-    const [is_in_Chose, setis_in_Chose] = useState(true);
+    const [is_in_Match, setis_in_Match] = useState(false);
+    const [is_in_Search, setis_in_Search] = useState(false);
     const [chose_figure, setchose_figure] = useState(0);
+    const [mynumber, setmynumber] = useState(0);
+    const [my_turn, setmy_turn] = useState(false);
+    const [allpieces, setallPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
+    const [pieces, setPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
+    const [positions, setPositions] = useState<Position[]>([new Position(10, 10, ""), new Position(10, 10, ""), new Position(10, 10, ""), new Position(10, 10, "")]);
 
     // Logout-Request
     const logout = async () => {
@@ -84,6 +85,187 @@ export default function App() {
             console.error(`Fehler beim Logout:`, error);
         }
     };
+
+    const searchmatch = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/matches/searchMatch`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+                navigate("/");
+                return; 
+            }
+
+            const message = await response.text();
+
+            if (message === "Match created" || message === "Match not full" || message === "Match full"){
+                setis_in_Search(true);
+            }
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const decodeposition = (postion: number, figure: string) => {
+        if (postion <= 10){
+            return new Position(10, (10 - postion), figure);
+        }
+
+        if (postion <= 20){
+            return new Position((10 - (postion - 10)), 0, figure);
+        }
+
+        if (postion <= 30){
+            return new Position(0, postion - 20, figure);
+        }
+
+        if (postion <= 40){
+            return new Position(postion - 30, 10, figure);
+        }
+    }
+
+    const gamestate = async (mynumberref: number) => {
+        try {
+            const response = await fetch(`http://localhost:8080/matches/getGamestate`, {
+                method: "GET",
+                credentials: "include"
+            });
+            
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+                return; 
+            }
+            
+            const contentType = response.headers.get("content-type");
+            
+            if (contentType && contentType.includes("application/json")) {
+
+                const message = await response.json();
+                
+                setmy_turn(mynumberref === message.isActive)
+
+                if (message.creater && message.creater.figure > 0){
+                    console.log(mynumberref);
+                    if(mynumberref === 1) setis_in_Match(true);
+                    pieces[message.creater.figure - 1] = "";
+                    positions[0] = decodeposition(message.creater.position, allpieces[message.creater.figure - 1]) || positions[0];
+                }
+
+                if (message.secondplayer && message.secondplayer.figure > 0){
+                    if(mynumberref === 2) setis_in_Match(true);
+                    pieces[message.secondplayer.figure - 1] = "";
+                    positions[1] = decodeposition(message.secondplayer.position, allpieces[message.secondplayer.figure - 1]) || positions[1];
+                }
+
+                if (message.thirdplayer && message.thirdplayer.figure > 0){
+                    if(mynumberref === 3) setis_in_Match(true);
+                    pieces[message.thirdplayer.figure - 1] = "";
+                    positions[2] = decodeposition(message.thirdplayer.position, allpieces[message.thirdplayer.figure - 1]) || positions[2];
+                }
+
+                if (message.fourthplayer && message.fourthplayer.figure > 0){
+                    if(mynumberref === 4) setis_in_Match(true);
+                    pieces[message.fourthplayer.figure - 1] = "";
+                    positions[3] = decodeposition(message.fourthplayer.position, allpieces[message.fourthplayer.figure - 1]) || positions[3];
+                }
+
+                setis_in_Search(positions[mynumberref - 1].figure === "");
+
+            } else {
+                return;
+            }
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const setfigure = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/users/setfigure?figure=${chose_figure + 1}`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+                return; 
+            }
+
+            const message = await response.text();
+
+            setis_in_Match(true);
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const myNumberRef = useRef(0);
+
+    const getnumber = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/users/users/mynumber`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+                navigate("/");
+                return; 
+            }
+
+            const message = await response.text();
+            setmynumber(parseInt(message, 10));
+            myNumberRef.current = parseInt(message, 10);
+
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const makeMove = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/matches/makeMove`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+                navigate("/");
+                return; 
+            }
+
+            const message = await response.text();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    useEffect(() => {
+
+        getnumber();
+        gamestate(myNumberRef.current);
+
+        const interval = setInterval(() => {
+            gamestate(myNumberRef.current);
+        }, 2500);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Beispiel-Daten
     const fields: Field[][] = [
@@ -160,33 +342,28 @@ export default function App() {
         ],
     ];
 
-    const positions: Position[] = [
-        new Position(10, 3, [penguin, ship]),
-        new Position(1, 10, [fingerhat]),
-        new Position(0, 10, [car]),
-    ];
-
-    const pieces: string[] = [penguin, ship, fingerhat, car];
-
     return (
         <div>
             {/* Logout */}
             <button onClick={logout}>Abmelden</button>
+            <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
             {!is_in_Match && <div>
-                    {!is_in_Search && <button>Match suchen</button>}
-                    {is_in_Search && <div> {!is_in_Chose && <p>Suche im Gange ...</p>} {is_in_Chose && <div className="form-column"><p>Wähle eine Figur</p>
+                    {!is_in_Search && <button onClick={searchmatch}>Match suchen</button>}
+                    {is_in_Search && <div className="form-column"><p>Wähle eine Figur</p>
                     <div className="form-row">
-                        {pieces.map((p, index) => (
-                                <div onClick={() => setchose_figure(index)} style={{backgroundColor: chose_figure === index ?"white" : ""}}>
+                        {pieces.map((p, index) => ( 
+                            <div>
+                                {p !== "" && <div onClick={() => setchose_figure(index)} style={{backgroundColor: chose_figure === index ?"white" : ""}}>
                                     <img 
                                         className="item-chose"
                                         src={p}
                                     />
-                                </div>
+                                </div>}
+                            </div>
                             ))
                         }
                     </div>
-                    <button>Senden</button></div>} </div>}
+                    <button onClick={setfigure}>Senden</button> </div>}
                 </div>
             }
             {is_in_Match && <div className="table-container" > 
@@ -195,13 +372,12 @@ export default function App() {
                 {fields.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                     {row.map((field, indexField) => {
-                    console.log(field.color)
                     
                     if(rowIndex == 4 && indexField == 5){
                         field = showField;
                     }
                     if(rowIndex == 4 && indexField == 4){
-                        field = new Field("---", "not clickable", 0);
+                        field = new Field(my_turn ? "würfeln" : "---", "roll", 0);
                     }
                     if(rowIndex == 4 && indexField == 6){
                         field = new Field("---", "not clickable", 0);
@@ -231,6 +407,9 @@ export default function App() {
                         <td onClick={() => {
                             if(field.color && field.color !== "not clickable" && !(rowIndex == 4 && indexField == 5))
                             {
+                                if(field.color === "roll" && my_turn){
+                                    makeMove();
+                                }
                                 if(field.color === "clickable"){
 
                                 }
@@ -253,21 +432,14 @@ export default function App() {
                                     : "black")
                         }}
                         >
-                        
-                        {positions.map((p) => (
-                            <div>
-                                {rowIndex == p.x && indexField == p.y && 
-                                    <div className="container">
-                                        {p.figures.map((f) => (
-                                            <img
-                                                className="item"
-                                                src={f}
-                                            />
-                                        ))}
-                                    </div>
-                                }
-                            </div>
-                        ))}
+
+                        <div className="container">
+                            {positions.map((p, i) => 
+                                rowIndex === p.x && indexField === p.y ? (
+                                    <img key={i} className="item" src={p.figure} />
+                                ) : null
+                            )}
+                        </div>
 
                         {/* Bild */}
                         {isImage && (
@@ -278,7 +450,7 @@ export default function App() {
                         )}
 
                         {/* Farbband */}
-                        {!isImage && field.color && !field.color.includes("clickable") && (
+                        {!isImage && field.color && !field.color.includes("clickable") && !field.color.includes("roll") && (
                             <div 
                                 style={{
                                     backgroundColor: field.color,

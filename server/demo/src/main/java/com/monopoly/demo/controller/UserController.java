@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
+import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -58,5 +60,49 @@ public class UserController {
     public ResponseEntity<String> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok("Logout erfolgreich!");
+    }
+
+    @PostMapping("/setfigure")
+    public ResponseEntity<String> setfigure(@RequestParam Integer figure,
+                                            HttpSession session) {
+
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = repository.findById(userId);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        user.setFigure(figure);
+
+        repository.save(user);
+
+        return ResponseEntity.ok("Figure gesetzt");
+    }
+
+    @GetMapping("/users/mynumber")
+    public ResponseEntity<?> getCurrentUser(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = repository.findById(userId);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        return ResponseEntity.ok(user.getMoney());
     }
 }

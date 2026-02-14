@@ -10,29 +10,30 @@ public class Match {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "creater_id", nullable = false)
-    private Long creater;
+    private User creater;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "secondplayer_id", nullable = true)
-    private Long secondplayer;
+    private User secondplayer;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "thirdplayer_id", nullable = true)
-    private Long thirdplayer;
+    private User thirdplayer;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "fourthplayer_id", nullable = true)
-    private Long fourthplayer;
+    private User fourthplayer;
 
     @Column(nullable = false)
     private Integer isActive;
 
     @ManyToOne
     @JoinColumn(name = "winner_id")
-    private Long winner;
+    private User winner;
 
+    // --- Getter & Setter ---
     public Long getId() {
         return id;
     }
@@ -41,35 +42,35 @@ public class Match {
         this.id = id;
     }
 
-    public Long getCreater() {
+    public User getCreater() {
         return creater;
     }
 
-    public void setCreater(Long creater) {
+    public void setCreater(User creater) {
         this.creater = creater;
     }
 
-    public Long getSecondplayer() {
+    public User getSecondplayer() {
         return secondplayer;
     }
 
-    public void setSecondplayer(Long secondplayer) {
+    public void setSecondplayer(User secondplayer) {
         this.secondplayer = secondplayer;
     }
 
-    public Long getThirdplayer() {
+    public User getThirdplayer() {
         return thirdplayer;
     }
 
-    public void setThirdplayer(Long thirdplayer) {
+    public void setThirdplayer(User thirdplayer) {
         this.thirdplayer = thirdplayer;
     }
 
-    public Long getFourthplayer() {
+    public User getFourthplayer() {
         return fourthplayer;
     }
 
-    public void setFourthplayer(Long fourthplayer) {
+    public void setFourthplayer(User fourthplayer) {
         this.fourthplayer = fourthplayer;
     }
 
@@ -81,11 +82,11 @@ public class Match {
         this.isActive = isActive;
     }
 
-    public Long getWinner() {
+    public User getWinner() {
         return winner;
     }
 
-    public void setWinner(Long winner) {
+    public void setWinner(User winner) {
         this.winner = winner;
     }
 }

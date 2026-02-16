@@ -103,6 +103,6 @@ public class UserController {
 
         User user = userOpt.get();
 
-        return ResponseEntity.ok(user.getMoney());
+        return ResponseEntity.ok(user.getTurn_number());
     }
 }

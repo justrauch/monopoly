@@ -54,10 +54,12 @@ export default function App() {
 
     const navigate = useNavigate();
     const [showField, setshowField] = useState<Field>(new Field("", "", 0));
+    const [loading, setloading] = useState(true);
     const [is_in_Match, setis_in_Match] = useState(false);
     const [is_in_Search, setis_in_Search] = useState(false);
     const [chose_figure, setchose_figure] = useState(0);
     const [mynumber, setmynumber] = useState(0);
+    const [mymoney, setmymoney] = useState(0);
     const [my_turn, setmy_turn] = useState(false);
     const [allpieces, setallPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
     const [pieces, setPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
@@ -96,7 +98,6 @@ export default function App() {
             if (!response.ok) { 
                 await response.json(); 
                 console.error(`Fehler beim Logout`);
-                navigate("/");
                 return; 
             }
 
@@ -152,34 +153,50 @@ export default function App() {
 
                 if (message.creater && message.creater.figure > 0){
                     console.log(mynumberref);
-                    if(mynumberref === 1) setis_in_Match(true);
-                    pieces[message.creater.figure - 1] = "";
+                    if(mynumberref === 1) {setis_in_Match(true); setmymoney(message.creater.money);}
+                    setPieces(prev => {
+                        const copy = [...prev];
+                        copy[message.creater.figure - 1] = "";
+                        return copy;
+                    });
                     positions[0] = decodeposition(message.creater.position, allpieces[message.creater.figure - 1]) || positions[0];
                 }
 
                 if (message.secondplayer && message.secondplayer.figure > 0){
-                    if(mynumberref === 2) setis_in_Match(true);
-                    pieces[message.secondplayer.figure - 1] = "";
+                    if(mynumberref === 2) {setis_in_Match(true); setmymoney(message.secondplayer.money);}
+                    setPieces(prev => {
+                        const copy = [...prev];
+                        copy[message.secondplayer.figure - 1] = "";
+                        return copy;
+                    });
                     positions[1] = decodeposition(message.secondplayer.position, allpieces[message.secondplayer.figure - 1]) || positions[1];
                 }
 
                 if (message.thirdplayer && message.thirdplayer.figure > 0){
-                    if(mynumberref === 3) setis_in_Match(true);
-                    pieces[message.thirdplayer.figure - 1] = "";
+                    if(mynumberref === 3) {setis_in_Match(true); setmymoney(message.thirdplayer.money);}
+                    setPieces(prev => {
+                        const copy = [...prev];
+                        copy[message.thirdplayer.figure - 1] = "";
+                        return copy;
+                    });
                     positions[2] = decodeposition(message.thirdplayer.position, allpieces[message.thirdplayer.figure - 1]) || positions[2];
                 }
 
                 if (message.fourthplayer && message.fourthplayer.figure > 0){
-                    if(mynumberref === 4) setis_in_Match(true);
-                    pieces[message.fourthplayer.figure - 1] = "";
+                    if(mynumberref === 4) {setis_in_Match(true); setmymoney(message.fourthplayer.money);}
+                    setPieces(prev => {
+                        const copy = [...prev];
+                        copy[message.fourthplayer.figure - 1] = "";
+                        return copy;
+                    });
                     positions[3] = decodeposition(message.fourthplayer.position, allpieces[message.fourthplayer.figure - 1]) || positions[3];
                 }
 
-                setis_in_Search(positions[mynumberref - 1].figure === "");
+                setis_in_Search(mynumberref === 0 ? positions[mynumberref - 1].figure === "" : is_in_Search);
 
-            } else {
-                return;
             }
+
+            setloading(false);
 
         } catch (error) {
             console.error(`Fehler beim Logout:`, error);
@@ -220,7 +237,6 @@ export default function App() {
             if (!response.ok) { 
                 await response.json(); 
                 console.error(`Fehler beim Logout`);
-                navigate("/");
                 return; 
             }
 
@@ -244,11 +260,11 @@ export default function App() {
             if (!response.ok) { 
                 await response.json(); 
                 console.error(`Fehler beim Logout`);
-                navigate("/");
+
                 return; 
             }
 
-            const message = await response.text();
+            const message = await response.json();
 
         } catch (error) {
             console.error(`Fehler beim Logout:`, error);
@@ -345,8 +361,7 @@ export default function App() {
     return (
         <div>
             {/* Logout */}
-            <button onClick={logout}>Abmelden</button>
-            <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
+            <button onClick={logout}>Abmelden</button> {loading && <p>loading</p>}{!loading && <div>
             {!is_in_Match && <div>
                     {!is_in_Search && <button onClick={searchmatch}>Match suchen</button>}
                     {is_in_Search && <div className="form-column"><p>Wähle eine Figur</p>
@@ -367,6 +382,8 @@ export default function App() {
                 </div>
             }
             {is_in_Match && <div className="table-container" > 
+            <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
+            <p>Mein verbleibendes Geld: {mymoney}</p>
             <table style={{ borderCollapse: "collapse" }}>
             <tbody>
                 {fields.map((row, rowIndex) => (
@@ -488,6 +505,6 @@ export default function App() {
                 ))}
             </tbody>
             </table> </div>}
-        </div>
+        </div> }</div>
     )
 }

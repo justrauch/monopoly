@@ -12,7 +12,10 @@ public class User {
     private String name;
     private String password;
 
-    private int money;
+    @Column(nullable = false)
+    private int money = 1500;
+
+    private int turn_number;
     private int position;
     private int figure;
 
@@ -28,6 +31,9 @@ public class User {
 
     public int getMoney() { return money; }
     public void setMoney(int money) { this.money = money; }
+
+    public int getTurn_number() { return turn_number; }
+    public void setTurn_number(int turn_number) { this.turn_number = turn_number; }
 
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }

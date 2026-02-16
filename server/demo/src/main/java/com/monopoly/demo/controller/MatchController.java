@@ -1,9 +1,13 @@
 package com.monopoly.demo.controller;
 
+import com.monopoly.demo.controller.MatchController.StreetTemplate;
 import com.monopoly.demo.model.Match;
+import com.monopoly.demo.model.Street;
 import com.monopoly.demo.model.User;
+import com.monopoly.demo.service.StreetService;
 import com.monopoly.demo.repository.MatchRepository;
 import com.monopoly.demo.repository.UserRepository;
+import com.monopoly.demo.repository.StreetRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 import java.util.Random;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/matches")
@@ -22,11 +27,65 @@ public class MatchController {
 
     private final MatchRepository repository;
     private final UserRepository urepository;
+    private final StreetRepository srepository;
+    private final StreetService sservice;
+    private int last = 0;
 
-    public MatchController(MatchRepository repository, UserRepository urepository) {
+    public MatchController(StreetService sservice, MatchRepository repository, UserRepository urepository, StreetRepository srepository) {
+        this.sservice = sservice;
         this.repository = repository;
         this.urepository = urepository;
+        this.srepository = srepository;
     }
+
+    public record StreetTemplate(String name, Integer price, boolean canBeBought, boolean isSpecial) {}
+
+    public static final StreetTemplate[] BOARD = new StreetTemplate[] {
+        new StreetTemplate("Los", 0, false, true),
+        new StreetTemplate("Badstraße", 60, true, false),
+        new StreetTemplate("Gemeinschaftsfeld", null, false, true),
+        new StreetTemplate("Turmstraße", 60, true, false),
+        new StreetTemplate("Einkommensteuer", -200, false, true),
+        new StreetTemplate("Südbahnhof", 200, true, true),
+        new StreetTemplate("Chausseestraße", 100, true, false),
+        new StreetTemplate("Ereignisfeld", null, false, true),
+        new StreetTemplate("Elisenstraße", 100, true, false),
+        new StreetTemplate("Poststraße", 120, true, false),
+        new StreetTemplate("Gefängnis / Nur zu Besuch", null, false, true),
+
+        new StreetTemplate("Seestraße", 140, true, false),
+        new StreetTemplate("Elektrizitätswerk", 150, true, true),
+        new StreetTemplate("Hafenstraße", 140, true, false),
+        new StreetTemplate("Neue Straße", 160, true, false),
+        new StreetTemplate("Westbahnhof", 200, true, true),
+        new StreetTemplate("Münchener Straße", 180, true, false),
+        new StreetTemplate("Gemeinschaftsfeld", null, false, true),
+        new StreetTemplate("Wiener Straße", 180, true, false),
+        new StreetTemplate("Berliner Straße", 200, true, false),
+        new StreetTemplate("Frei Parken", 100, false, true),
+
+        new StreetTemplate("Theaterstraße", 220, true, false),
+        new StreetTemplate("Ereignisfeld", null, false, true),
+        new StreetTemplate("Museumstraße", 220, true, false),
+        new StreetTemplate("Opernplatz", 240, true, false),
+        new StreetTemplate("Nordbahnhof", 200, true, true),
+        new StreetTemplate("Lessingstraße", 260, true, false),
+        new StreetTemplate("Schillerstraße", 260, true, false),
+        new StreetTemplate("Wasserwerk", 150, true, true),
+        new StreetTemplate("Goethestraße", 280, true, false),
+        new StreetTemplate("Gehe ins Gefängnis", 0, false, true),
+
+        new StreetTemplate("Rathausplatz", 300, true, false),
+        new StreetTemplate("Hauptstraße", 300, true, false),
+        new StreetTemplate("Gemeinschaftsfeld", null, false, true),
+        new StreetTemplate("Bahnhofstraße", 320, true, false),
+        new StreetTemplate("Hauptbahnhof", 200, true, true),
+        new StreetTemplate("Ereignisfeld", null, false, true),
+        new StreetTemplate("Parkstraße", 350, true, false),
+        new StreetTemplate("Zusatzsteuer", -100, false, true),
+        new StreetTemplate("Schlossallee", 400, true, false)
+    };
+
 
     // --- MATCH SUCHEN / BEITRETEN ---
     @PostMapping("/searchMatch")
@@ -44,13 +103,22 @@ public class MatchController {
 
         User user = userOpt.get();
 
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+            user, user, user, user
+        );
+
+        if (!matches.isEmpty()) {
+            return ResponseEntity.ok("Already in Match!");
+        }
+
         List<Match> listmatches = repository.findByIsActive(0);
 
         if (listmatches.isEmpty()) {
             Match newmatch = new Match();
             newmatch.setCreater(user);
             newmatch.setIsActive(0);
-            user.setMoney(1);
+            user.setTurn_number(1);
+            user.setMoney(1500);
             urepository.save(user);
             repository.save(newmatch);
 
@@ -62,17 +130,18 @@ public class MatchController {
 
         if (firstMatch.getSecondplayer() == null) {
             firstMatch.setSecondplayer(user);
-            user.setMoney(2);
+            user.setTurn_number(2);
         } else if (firstMatch.getThirdplayer() == null) {
             firstMatch.setThirdplayer(user);
-            user.setMoney(3);
+            user.setTurn_number(3);
         } else if (firstMatch.getFourthplayer() == null) {
             firstMatch.setFourthplayer(user);
             firstMatch.setIsActive(1);
-            user.setMoney(4);
+            user.setTurn_number(4);
             message = "Match full";
         }
         
+        user.setMoney(1500);
         urepository.save(user);
         repository.save(firstMatch);
         return ResponseEntity.ok(message);
@@ -120,6 +189,10 @@ public class MatchController {
 
         User user = userOpt.get();
 
+        if (user.getMoney() <= 0) {
+            return ResponseEntity.status(404).body("Game Over!");
+        }
+
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user
         );
@@ -130,20 +203,88 @@ public class MatchController {
 
         Match match = matches.get(0);
 
+        if (match.getWinner() != null){
+            return ResponseEntity.status(404).body("Game is over");
+        }
+
+        if (user.getTurn_number() != match.getIsActive()) {
+            return ResponseEntity.status(404).body("Not ur Turn!");
+        }
+
         Integer isActive = match.getIsActive();
         if (isActive == null) isActive = 0;
-        match.setIsActive((isActive % 4) + 1);
 
-        int randomInt = new Random().nextInt(12) + 1;
+        int randomInt = new Random().nextInt(6) + 1;
+        int randomInt2 = new Random().nextInt(6) + 1;
 
+        // bei 3 pasch gefängnis später einbauen
+        if (
+             randomInt != randomInt2 || 
+            (randomInt != randomInt2 && (last == 0 || last == user.getTurn_number()))){
+            int newis_Active = (user.getTurn_number() % 4) + 1;
+            User tmpuser = urepository.findByTurnNumber(newis_Active);
+            while (tmpuser == null && tmpuser != user){
+                newis_Active = (user.getTurn_number() % 4) + 1;
+                tmpuser = urepository.findByTurnNumber(newis_Active);
+            }
+            match.setIsActive(newis_Active);
+        }
 
-        int newPosition = (user.getPosition() + randomInt) % 40;
+        int newPosition = (user.getPosition() + randomInt + randomInt2) % 40;
+        
+        if (newPosition < user.getPosition()){
+            user.setMoney(user.getMoney() + 200);
+        }
+
         user.setPosition(newPosition);
+
+        Street street = srepository
+        .findByMatchIdAndIndex(match.getId(), newPosition)
+        .orElse(null);
+
+        if (street == null && !BOARD[newPosition].canBeBought && BOARD[newPosition].price != null){
+            user.setMoney(user.getMoney() + BOARD[newPosition].price);
+        }
+        if (street != null) {
+            int rent = 0;
+
+            // Bahnhöfe
+            if (newPosition == 5 || newPosition == 15 || newPosition == 25 || newPosition == 35) {
+                double stationsOwned = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition);
+                rent = (int) (25 * (stationsOwned / 100.0) * 4);
+
+            // Werke
+            } else if (newPosition == 12 || newPosition == 28) {
+                double utilitiesOwned = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition);
+                int diceSum = randomInt + randomInt2;
+                rent = diceSum * (utilitiesOwned == 50.0 ? 4 : 10);
+
+            // normale Straßen
+            } else {
+                int price = BOARD[newPosition].price;
+                int doubleRent = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition) == 100.0 ? 2 : 1;
+                int baseRent = (int) (price * 0.1);
+                int houseRent = (int) (street.getHouses() * 0.25 * price);
+                int hotelRent = (int) (street.getHotels() * 0.5 * price);
+                rent = doubleRent * (baseRent + houseRent + hotelRent);
+            }
+
+            // Geld abziehen / dem Besitzer geben
+            user.setMoney(user.getMoney() - rent);
+            street.getOwner().setMoney(street.getOwner().getMoney() + rent);
+            urepository.save(street.getOwner());
+        }
+
+        last = user.getTurn_number();
 
         urepository.save(user);
         repository.save(match);
 
-        return ResponseEntity.ok(randomInt);
+        Map<String, Integer> response = new HashMap<>();
+        response.put("dice1", randomInt);
+        response.put("dice2", randomInt2);
+
+        return ResponseEntity.ok(response);
     }
 
 }

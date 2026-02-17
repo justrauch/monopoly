@@ -30,6 +30,7 @@ public class MatchController {
     private final StreetRepository srepository;
     private final StreetService sservice;
     private int last = 0;
+    private boolean pasch = false;
 
     public MatchController(StreetService sservice, MatchRepository repository, UserRepository urepository, StreetRepository srepository) {
         this.sservice = sservice;
@@ -147,6 +148,11 @@ public class MatchController {
         return ResponseEntity.ok(message);
     }
 
+    public record GameStateResponse(
+        Match match,
+        List<Street> streets
+    ) {}
+
     // --- GAMESTATE ABRUFEN ---
     @GetMapping("/getGamestate")
     public ResponseEntity<?> getGamestate(HttpSession session) {
@@ -171,7 +177,12 @@ public class MatchController {
             return ResponseEntity.ok("In Search");
         }
 
-        return ResponseEntity.ok(matches.get(0));
+        Match match = matches.get(0);
+        List<Street> streets = srepository.findByMatchId(match.getId());
+
+        GameStateResponse response = new GameStateResponse(match, streets);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/makeMove")
@@ -207,6 +218,11 @@ public class MatchController {
             return ResponseEntity.status(404).body("Game is over");
         }
 
+        
+        if (match.getIsActive() < 0){
+            return ResponseEntity.status(404).body("Du hast schon gewürfelt");
+        }
+
         if (user.getTurn_number() != match.getIsActive()) {
             return ResponseEntity.status(404).body("Not ur Turn!");
         }
@@ -214,21 +230,25 @@ public class MatchController {
         Integer isActive = match.getIsActive();
         if (isActive == null) isActive = 0;
 
-        int randomInt = new Random().nextInt(6) + 1;
-        int randomInt2 = new Random().nextInt(6) + 1;
+        int randomInt = 1;
+        //new Random().nextInt(6) + 1;
+        int randomInt2 = 0;
+        //new Random().nextInt(6) + 1;
 
-        // bei 3 pasch gefängnis später einbauen
-        if (
-             randomInt != randomInt2 || 
-            (randomInt != randomInt2 && (last == 0 || last == user.getTurn_number()))){
-            int newis_Active = (user.getTurn_number() % 4) + 1;
-            User tmpuser = urepository.findByTurnNumber(newis_Active);
-            while (tmpuser == null && tmpuser != user){
-                newis_Active = (user.getTurn_number() % 4) + 1;
-                tmpuser = urepository.findByTurnNumber(newis_Active);
-            }
-            match.setIsActive(newis_Active);
+        if (randomInt != randomInt2){
+            pasch = false;
         }
+
+        else if (randomInt == randomInt2 && last != user.getTurn_number()) {
+            pasch = true;
+        }
+
+        //Gefängnis später
+        else if (randomInt == randomInt2 && last == user.getTurn_number()) {
+            pasch = false;
+        }
+
+        match.setIsActive(isActive * - 1);
 
         int newPosition = (user.getPosition() + randomInt + randomInt2) % 40;
         
@@ -239,34 +259,19 @@ public class MatchController {
         user.setPosition(newPosition);
 
         Street street = srepository
-        .findByMatchIdAndIndex(match.getId(), newPosition)
+        .findByMatchIdAndStreetIndex(match.getId(), newPosition)
         .orElse(null);
 
         if (street == null && !BOARD[newPosition].canBeBought && BOARD[newPosition].price != null){
             user.setMoney(user.getMoney() + BOARD[newPosition].price);
         }
         if (street != null) {
-            int rent = 0;
+            int rent = street.getPrice();
 
-            // Bahnhöfe
-            if (newPosition == 5 || newPosition == 15 || newPosition == 25 || newPosition == 35) {
-                double stationsOwned = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition);
-                rent = (int) (25 * (stationsOwned / 100.0) * 4);
-
-            // Werke
-            } else if (newPosition == 12 || newPosition == 28) {
+            if (newPosition == 12 || newPosition == 28) {
                 double utilitiesOwned = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition);
                 int diceSum = randomInt + randomInt2;
                 rent = diceSum * (utilitiesOwned == 50.0 ? 4 : 10);
-
-            // normale Straßen
-            } else {
-                int price = BOARD[newPosition].price;
-                int doubleRent = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition) == 100.0 ? 2 : 1;
-                int baseRent = (int) (price * 0.1);
-                int houseRent = (int) (street.getHouses() * 0.25 * price);
-                int hotelRent = (int) (street.getHotels() * 0.5 * price);
-                rent = doubleRent * (baseRent + houseRent + hotelRent);
             }
 
             // Geld abziehen / dem Besitzer geben
@@ -285,6 +290,51 @@ public class MatchController {
         response.put("dice2", randomInt2);
 
         return ResponseEntity.ok(response);
+    }
+
+        // --- GAMESTATE ABRUFEN ---
+    @GetMapping("/endTurn")
+    public ResponseEntity<?> endTurn(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.ok("In Search");
+        }
+
+        Match match = matches.get(0);
+
+        if (!pasch){
+            int newisActive = (user.getTurn_number() % 4) + 1;
+            User tmpuser = urepository.findByTurnNumber(newisActive);
+
+            while (tmpuser == null) {
+                newisActive = (newisActive % 4) + 1;
+                tmpuser = urepository.findByTurnNumber(newisActive);
+            }
+            match.setIsActive(newisActive);
+        }
+        else {
+            match.setIsActive(user.getTurn_number());
+        }
+
+        repository.save(match);
+
+        return ResponseEntity.ok("Dein Zug ist vorbei");
     }
 
 }

@@ -33,6 +33,8 @@ class User(Base):
     position = Column(Integer, nullable=False, default=0)
     figure = Column(Integer, nullable=False, default=0)
 
+    #prison_sentence = Column(Integer, nullable=False, default=0)
+
     # Matches
     matches_created = relationship(
         "Match",
@@ -107,7 +109,7 @@ class Street(Base):
     hotels = Column(Integer, nullable=False, default=0)
     price = Column(Integer, nullable=False)
 
-    index = Column(Integer, nullable=False)
+    street_index = Column(Integer, nullable=False)
 
     is_special = Column(Boolean, nullable=False)
 

@@ -50,10 +50,91 @@ class Position {
     }
 }
 
+const decodeposition = (postion: number, figure: string) => {
+    if (postion <= 10){
+        return new Position(10, (10 - postion), figure);
+    }
+
+    if (postion <= 20){
+        return new Position((10 - (postion - 10)), 0, figure);
+    }
+
+    if (postion <= 30){
+        return new Position(0, postion - 20, figure);
+    }
+
+    if (postion <= 40){
+        return new Position(postion - 30, 10, figure);
+    }
+}
+
+const encodePosition = (pos: Position): number => {
+    var x = pos.y;
+    var y = pos.x;
+
+    if (y === 10 && x >= 0 && x <= 10) {
+        return 10 - x;
+    }
+
+    if (x === 0 && y >= 0 && y < 10) {
+        return 20 - y;
+    }
+
+    if (y === 0 && x > 0 && x <= 10) {
+        return 20 + x;
+    }
+
+    if (x === 10 && y > 0 && y <= 10) {
+        return 31 + y;
+    }
+
+    throw new Error("Ungültige Position");
+};
+
+const housecost = (pos: Position): number => {
+    var x = pos.y;
+    var y = pos.x;
+
+    if (y === 10 && x >= 0 && x <= 10) {
+        return 50;
+    }
+
+    if (x === 0 && y >= 0 && y < 10) {
+        return 100;
+    }
+
+    if (y === 0 && x > 0 && x <= 10) {
+        return 150;
+    }
+
+    if (x === 10 && y > 0 && y <= 10) {
+        return 200;
+    }
+
+    throw new Error("Ungültige Position");
+};
+
+class Street {
+    index: Position;
+    hotel: number;
+    house: number;
+    price: number;
+    owner: number;
+
+    constructor(index: number, hotel: number, house: number, price: number, owner: number) {
+        this.index = decodeposition(index, "") || new Position(0, 0, "");
+        this.hotel = hotel;
+        this.house = house;
+        this.price = price;
+        this.owner = owner;
+    }
+}
+
 export default function App() {
 
     const navigate = useNavigate();
     const [showField, setshowField] = useState<Field>(new Field("", "", 0));
+    const [showPosition, setPosition] = useState<Position>(new Position(10, 10, ""));
     const [loading, setloading] = useState(true);
     const [is_in_Match, setis_in_Match] = useState(false);
     const [is_in_Search, setis_in_Search] = useState(false);
@@ -61,8 +142,10 @@ export default function App() {
     const [mynumber, setmynumber] = useState(0);
     const [mymoney, setmymoney] = useState(0);
     const [my_turn, setmy_turn] = useState(false);
+    const [my_position, setmy_position] = useState<Position>();
     const [allpieces, setallPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
     const [pieces, setPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
+    const [boughtstreets, setboughtstreets] = useState<Street[]>();
     const [positions, setPositions] = useState<Position[]>([new Position(10, 10, ""), new Position(10, 10, ""), new Position(10, 10, ""), new Position(10, 10, "")]);
 
     // Logout-Request
@@ -147,13 +230,31 @@ export default function App() {
             
             if (contentType && contentType.includes("application/json")) {
 
-                const message = await response.json();
+                var message = await response.json();
+
+                setboughtstreets(
+                    message.streets.map(
+                        (m : any) => new Street(
+                            m.index,
+                            m.hotels,
+                            m.houses,
+                            m.price,
+                            m.owner.turn_number
+                        )
+                    )
+                );
+
+                message = message.match;
                 
-                setmy_turn(mynumberref === message.isActive)
+                setmy_turn(mynumberref === Math.abs(message.isActive))
 
                 if (message.creater && message.creater.figure > 0){
-                    console.log(mynumberref);
-                    if(mynumberref === 1) {setis_in_Match(true); setmymoney(message.creater.money);}
+                    if(mynumberref === 1) {
+                        var pos = decodeposition(message.creater.position, "") || new Position(0,0,"");
+                        setmy_position(new Position(pos.x, pos.y, "")); 
+                        setis_in_Match(true); 
+                        setmymoney(message.creater.money);
+                    }
                     setPieces(prev => {
                         const copy = [...prev];
                         copy[message.creater.figure - 1] = "";
@@ -163,7 +264,12 @@ export default function App() {
                 }
 
                 if (message.secondplayer && message.secondplayer.figure > 0){
-                    if(mynumberref === 2) {setis_in_Match(true); setmymoney(message.secondplayer.money);}
+                    if(mynumberref === 2) {
+                        var pos = decodeposition(message.secondplayer.position, "") || new Position(0,0,"");
+                        setmy_position(new Position(pos.x, pos.y, "")); 
+                        setis_in_Match(true); 
+                        setmymoney(message.secondplayer.money);
+                    }
                     setPieces(prev => {
                         const copy = [...prev];
                         copy[message.secondplayer.figure - 1] = "";
@@ -173,7 +279,12 @@ export default function App() {
                 }
 
                 if (message.thirdplayer && message.thirdplayer.figure > 0){
-                    if(mynumberref === 3) {setis_in_Match(true); setmymoney(message.thirdplayer.money);}
+                    if(mynumberref === 3) {
+                        var pos = decodeposition(message.thirdplayer.position, "") || new Position(0,0,"");
+                        setmy_position(new Position(pos.x, pos.y, "")); 
+                        setis_in_Match(true); 
+                        setmymoney(message.thirdplayer.money);
+                    }
                     setPieces(prev => {
                         const copy = [...prev];
                         copy[message.thirdplayer.figure - 1] = "";
@@ -183,7 +294,12 @@ export default function App() {
                 }
 
                 if (message.fourthplayer && message.fourthplayer.figure > 0){
-                    if(mynumberref === 4) {setis_in_Match(true); setmymoney(message.fourthplayer.money);}
+                    if(mynumberref === 4) {
+                        var pos = decodeposition(message.fourthplayer.position, "") || new Position(0,0,"");
+                        setmy_position(new Position(pos.x, pos.y, "")); 
+                        setis_in_Match(true); 
+                        setmymoney(message.fourthplayer.money);
+                    }
                     setPieces(prev => {
                         const copy = [...prev];
                         copy[message.fourthplayer.figure - 1] = "";
@@ -253,6 +369,92 @@ export default function App() {
     const makeMove = async () => {
         try {
             const response = await fetch(`http://localhost:8080/matches/makeMove`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const encodePosition = (pos: Position): number => {
+        var x = pos.y;
+        var y = pos.x;
+
+        if (y === 10 && x >= 0 && x <= 10) {
+            return 10 - x;
+        }
+
+        if (x === 0 && y >= 0 && y < 10) {
+            return 20 - y;
+        }
+
+        if (y === 0 && x > 0 && x <= 10) {
+            return 20 + x;
+        }
+
+        if (x === 10 && y > 0 && y <= 10) {
+            return 31 + y;
+        }
+
+        throw new Error("Ungültige Position");
+    };
+
+    const buystreet = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/streets/buystreet/${encodePosition(showPosition)}`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const buybuilding = async (kind: string) => {
+        try {
+            const response = await fetch(`http://localhost:8080/streets/buybuilding/${encodePosition(showPosition)}/${kind}`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                await response.json(); 
+                console.error(`Fehler beim Logout`);
+
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const endturn = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/matches/endTurn`, {
                 method: "GET",
                 credentials: "include"
             });
@@ -389,6 +591,8 @@ export default function App() {
                 {fields.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                     {row.map((field, indexField) => {
+
+                    var boughtstreet = boughtstreets?.find((s) => s.index.y == indexField && s.index.x == rowIndex);
                     
                     if(rowIndex == 4 && indexField == 5){
                         field = showField;
@@ -397,22 +601,22 @@ export default function App() {
                         field = new Field(my_turn ? "würfeln" : "---", "roll", 0);
                     }
                     if(rowIndex == 4 && indexField == 6){
-                        field = new Field("---", "not clickable", 0);
+                        field = new Field(my_turn ? "Zug beenden" : "---", "endturn", 0);
                     }
                     if(rowIndex == 5 && indexField == 4 && (showField.name).includes("strasse")){
-                        field = new Field("Hotel bauen", "clickable", showField.price * 0.75);
+                        field = new Field("Hotel bauen", "hotel", housecost(new Position(showPosition.x, showPosition.y, "")));
                     }
                     if(rowIndex == 6 && indexField == 4 && (showField.name).includes("strasse")){
-                        field = new Field("Haus bauen", "clickable", showField.price * 0.25);
+                        field = new Field("Haus bauen", "house", housecost(new Position(showPosition.x, showPosition.y, "")));
                     }
                     if(rowIndex == 5 && indexField == 5){
-                        field = new Field(showField.isspecial ? "interagieren" : "bezahlen", "clickable", -showField.price * 0.5);
+                        field = new Field(showField.isspecial ? "interagieren" : "bezahlen", "clickable", boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? -boughtstreet.price : -showField.price * 0.1);
                     }
                     if(rowIndex == 6 && indexField == 5 && !showField.isspecial){
                         field = new Field("tauschen", "clickable", 0);
                     }
                     if(rowIndex == 5 && indexField == 6 && !showField.isspecial){
-                        field = new Field("kaufen", "clickable", showField.price);
+                        field = new Field("kaufen", "buy", boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.price : showField.price);
                     }
                     if(rowIndex == 6 && indexField == 6 && !showField.isspecial){
                         field = new Field("verkaufen", "clickable", 0);
@@ -427,11 +631,24 @@ export default function App() {
                                 if(field.color === "roll" && my_turn){
                                     makeMove();
                                 }
+                                if(field.color === "buy" && my_turn){
+                                    buystreet();
+                                }
+                                if(field.color === "endturn" && my_turn){
+                                    endturn();
+                                }
+                                if(field.color === "hotel" && my_turn){
+                                    buybuilding("hotel");
+                                }
+                                if(field.color === "house" && my_turn){
+                                    buybuilding("house");
+                                }
                                 if(field.color === "clickable"){
 
                                 }
-                                else{
+                                else if (((!boughtstreet && my_position && my_position.x == rowIndex && my_position.y == indexField) || boughtstreet?.owner == mynumber)){
                                     setshowField(fields[rowIndex][indexField]);
+                                    setPosition(new Position(rowIndex, indexField, ""));
                                 }
                             }
                         }}
@@ -442,11 +659,12 @@ export default function App() {
                             border: "1px solid black",
                             textAlign: "center",
                             padding: "6px",
-                            backgroundColor: field.color
-                                ? "#f5f5f5"
+                            backgroundColor: boughtstreet && boughtstreet.owner == mynumber && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex 
+                                ? "green" 
+                                : ( field.color ? "#f5f5f5" 
                                 : (rowIndex > 3 && rowIndex < 7 && indexField > 3 && indexField < 7
                                     ? "grey"
-                                    : "black")
+                                    : "black"))
                         }}
                         >
 
@@ -467,7 +685,7 @@ export default function App() {
                         )}
 
                         {/* Farbband */}
-                        {!isImage && field.color && !field.color.includes("clickable") && !field.color.includes("roll") && (
+                        {!isImage && field.color && !field.color.includes("clickable") && !field.color.includes("roll") && !field.color.includes("house") && !field.color.includes("hotel") && !field.color.includes("endturn") && !field.color.includes("buy") && (
                             <div 
                                 style={{
                                     backgroundColor: field.color,
@@ -480,9 +698,13 @@ export default function App() {
                                     padding: "0 5px"
                                 }}
                             >
-                                <p style={{ color: "black", margin: 0, fontSize: "12px" }}>4x</p>
+                                <p style={{ color: "black", margin: 0, fontSize: "12px" }}>{
+                                    boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.house : 0
+                                }x</p>
                                 <img src={house} style={{ width: "25px"}} />
-                                <p style={{ color: "black", margin: 0, fontSize: "12px" }}>5x</p>
+                                <p style={{ color: "black", margin: 0, fontSize: "12px" }}>{
+                                    boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.hotel : 0
+                                }x</p>
                                 <img src={hotel} style={{ width: "25px"}} />
                             </div>
                         )}
@@ -495,7 +717,7 @@ export default function App() {
                         {/* Preis */}
                         {field.price !== 0 && (
                             <div style={{ whiteSpace: "pre-line", fontSize: "12px", color: "black" }}>
-                            {field.price}€
+                            {boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.price : field.price}€
                             </div>
                         )}
                         </td>

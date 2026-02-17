@@ -19,8 +19,8 @@ public class Street {
     @Column(nullable = false)
     private Integer price;
 
-    @Column(nullable = false)
-    private Integer index;
+    @Column(name = "street_index", nullable = false)
+    private int streetIndex;
 
     @Column(nullable = false)
     private Boolean isSpecial;
@@ -66,11 +66,11 @@ public class Street {
     }
 
     public Integer getIndex() {
-        return index;
+        return streetIndex;
     }
 
-    public void setIndex(Integer index) {
-        this.index = index;
+    public void setIndex(Integer streetindex) {
+        this.streetIndex = streetindex;
     }
 
     public Boolean getIsSpecial() {

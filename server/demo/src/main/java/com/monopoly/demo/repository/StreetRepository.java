@@ -11,6 +11,6 @@ public interface StreetRepository extends JpaRepository<Street, Long> {
 
     List<Street> findByOwnerId(Long ownerId);
 
-    Optional<Street> findByMatchIdAndIndex(Long matchId, Integer index);
+    Optional<Street> findByMatchIdAndStreetIndex(Long matchId, Integer streetIndex);
 }
 

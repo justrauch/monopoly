@@ -265,7 +265,7 @@ public class MatchController {
         if (street == null && !BOARD[newPosition].canBeBought && BOARD[newPosition].price != null){
             user.setMoney(user.getMoney() + BOARD[newPosition].price);
         }
-        if (street != null) {
+        if (street != null && street.getOwner() != user) {
             int rent = street.getPrice();
 
             if (newPosition == 12 || newPosition == 28) {

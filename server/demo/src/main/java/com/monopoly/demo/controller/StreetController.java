@@ -91,6 +91,41 @@ public class StreetController {
         new StreetTemplate("Schlossallee", 400, true, false)
     };
 
+    public static final Map<Integer, int[]> RENT_TABLE = Map.ofEntries(
+
+    Map.entry(1,  new int[]{2, 4, 10, 30, 90, 160, 250}), // Badstraße
+    Map.entry(3,  new int[]{4, 8, 20, 60, 180, 320, 450}), // Turmstraße
+
+    Map.entry(6,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Chausseestraße
+    Map.entry(8,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Elisenstraße
+    Map.entry(9,  new int[]{8, 16, 40, 100, 300, 450, 600}), // Poststraße
+
+    Map.entry(11, new int[]{10, 20, 50, 150, 450, 625, 750}), // Seestraße
+    Map.entry(13, new int[]{10, 20, 50, 150, 450, 625, 750}), // Hafenstraße
+    Map.entry(14, new int[]{12, 24, 60, 180, 500, 700, 900}), // Neue Straße
+
+    Map.entry(16, new int[]{14, 28, 70, 200, 550, 750, 950}), // Münchener Straße
+    Map.entry(18, new int[]{14, 28, 70, 200, 550, 750, 950}), // Wiener Straße
+    Map.entry(19, new int[]{16, 32, 80, 220, 600, 800, 1000}), // Berliner Straße
+
+    Map.entry(21, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Theaterstraße
+    Map.entry(23, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Museumstraße
+    Map.entry(24, new int[]{20, 40, 100, 300, 750, 925, 1100}), // Opernplatz
+
+    Map.entry(26, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Lessingstraße
+    Map.entry(27, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Schillerstraße
+    Map.entry(29, new int[]{24, 48, 120, 360, 850, 1025, 1200}), // Goethestraße
+
+    Map.entry(31, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Rathausplatz
+    Map.entry(32, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Hauptstraße
+    Map.entry(34, new int[]{28, 56, 150, 450, 1000, 1200, 1400}), // Bahnhofstraße
+
+    Map.entry(37, new int[]{35, 70, 175, 500, 1100, 1300, 1500}), // Parkstraße
+    Map.entry(39, new int[]{50, 100, 200, 600, 1400, 1700, 2000}) // Schlossallee
+);
+
+
+    // fixe Preis
     @PostMapping("/buystreet/{index}")
     public ResponseEntity<String> getStreet(@PathVariable Integer index, HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
@@ -135,16 +170,39 @@ public class StreetController {
             return ResponseEntity.status(404).body("Straße ist zu teuer");
         }
         else {
-            Street newstreet = new Street();
-            newstreet.setOwner(user);
-            newstreet.setMatch(match);
-            newstreet.setPrice((int)(BOARD[index].price * 0.1));
-            newstreet.setIndex(index);
-            newstreet.setIsSpecial(BOARD[index].isSpecial);
-            newstreet.setHotels(0);
-            newstreet.setHouses(0);
-            user.setMoney(user.getMoney() - BOARD[index].price);
             try {
+                Street newstreet = new Street();
+                newstreet.setOwner(user);
+                newstreet.setMatch(match);
+                if (!BOARD[index].isSpecial)
+                {
+                    double perc = sservice.getOwnershipPercentByIndex(user, index);
+                    if (((index <= 3 || index >= 37) && perc == 50.0) || perc == (2.0 / 3)){
+                        newstreet.setPrice((int)(RENT_TABLE.get(index)[1]));
+                        for (Street s : sservice.getallstreetsofanindex(index)){
+                            s.setPrice(RENT_TABLE.get(s.getIndex())[1]);
+                        }
+                    }
+                    else {
+                        newstreet.setPrice((int)(RENT_TABLE.get(index)[0]));
+                    }
+                }
+                // Bahnhöfe
+                else if (index == 5 || index == 15 || index == 25 || index == 35) {
+                    double stationsOwned = sservice.getOwnershipPercentByIndex(user, index);
+                    for (Street s : sservice.getallstreetsofanindex(index)){
+                        s.setPrice((int) (25 * ((stationsOwned + 25.0) / 100.0) * 4));
+                    }
+                    newstreet.setPrice((int) (25 * ((stationsOwned + 25.0) / 100.0) * 4));
+                } 
+                else {
+                    newstreet.setPrice(0);
+                }
+                newstreet.setIndex(index);
+                newstreet.setIsSpecial(BOARD[index].isSpecial);
+                newstreet.setHotels(0);
+                newstreet.setHouses(0);
+                user.setMoney(user.getMoney() - BOARD[index].price);
                 urepository.save(user);
                 srepository.save(newstreet);
             } catch (Exception e) {
@@ -204,6 +262,12 @@ public class StreetController {
 
         Street street = streetOpt.get();
 
+        if (street.getHotels() == 1){
+            return ResponseEntity.status(404).body("Maximal 1 Hotel pro Strasse");
+        }
+        if (kind.equals("house") && street.getHouses() == 4){
+            return ResponseEntity.status(404).body("Du musst hier ein Hotel bauen");
+        }
         if (street.getIsSpecial()){
             return ResponseEntity.status(404).body("Hier kann kein gebäude gebaut werden");
         }
@@ -213,10 +277,19 @@ public class StreetController {
         else if (street.getOwner() != user){
             return ResponseEntity.status(404).body("Die Straße gehört dir nicht");
         }
-        else if (!(sservice.getOwnershipPercentByIndex(user, index) == 1)){
+        else if (!(sservice.getOwnershipPercentByIndex(user, index) == 100.0)){
             return ResponseEntity.status(404).body("Du musst zu erst alle Straßen dieser Farbe besitzen");
         }
         else {
+            if (kind.equals("house"))
+            {
+                int diff = street.getHouses() + 1;
+                for (Street s : sservice.getallstreetsofanindex(index)){
+                    if (Math.abs(diff - s.getHouses()) > 1){
+                        return ResponseEntity.status(404).body("Du musst die Häuser gleichmäßig bauen");
+                    }
+                }
+            }
             int price = 0;
             if (index == 1 || index == 3 || index == 6 || index == 8 || index == 9) {
                 price = 50;
@@ -260,19 +333,18 @@ public class StreetController {
 
             int newPosition = index;
             int rent = 0;
-            // Bahnhöfe
-            if (newPosition == 5 || newPosition == 15 || newPosition == 25 || newPosition == 35) {
-                double stationsOwned = sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition);
-                rent = (int) (25 * (stationsOwned / 100.0) * 4);
-            } 
-            else {
-                int price_street = BOARD[newPosition].price;
-                int doubleRent = Math.abs(sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition) - 100.0) < 0.01 ? 2 : 1;
-                int baseRent = (int) (price_street * 0.1);
-                int houseRent = (int) (street.getHouses() * 0.25 * price_street);
-                int hotelRent = (int) (street.getHotels() * 0.5 * price_street);
-                rent = doubleRent * (baseRent + houseRent + hotelRent);
+
+            int[] rents = RENT_TABLE.get(index);
+            if (street.getHotels() > 0) {
+                rent = rents[6];
+            } else if (street.getHouses() > 0) {
+                rent = rents[street.getHouses() + 1];
+            } else if (sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition) == 1) {
+                rent = rents[1];
+            } else {
+                rent = rents[0];
             }
+
             street.setPrice(rent);
             urepository.save(user);
             srepository.save(street);

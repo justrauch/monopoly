@@ -58,4 +58,31 @@ public class StreetService {
 
         return (ownedCount * 100.0) / setIndices.size();
     }
+
+    
+    /**
+     * Gibt alle dazu gehörigen Straßen für einen Index zurück.
+     * @param index Ein beliebiger Index aus dem Set
+     * @return Array an allen dazu gehörigen Straßen zurück
+     */
+    public List<Street> getallstreetsofanindex(int index) {
+        // Finde zu welchem Set/Color der Index gehört
+        String setKey = colorIndicesMap.entrySet().stream()
+                .filter(entry -> entry.getValue().contains(index))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        if (setKey == null) {
+            return List.of();
+        }
+
+        List<Integer> setIndices = colorIndicesMap.get(setKey);
+
+        List<Street> ownedCount = srepository.findAll().stream()
+        .filter(s -> setIndices.contains(s.getIndex()))
+        .toList();
+
+        return ownedCount;
+    }
 }

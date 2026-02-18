@@ -21,6 +21,14 @@ import fingerhat from "./assets/fingerhat.png"
 import house from "./assets/house.png"
 import hotel from "./assets/hotel.png"
 
+// TODO's
+// sell street/houses immer -1 house/hotel oder strasse wenn keine gebäude 
+// kaufen/bauen/interagieren zu einem button zusammenfassen 
+// Specialfelder
+//  Gefängnis
+//  Gameoverregeln
+
+
 class Field {
     name: string;
     color: string;
@@ -142,7 +150,11 @@ export default function App() {
     const [mynumber, setmynumber] = useState(0);
     const [mymoney, setmymoney] = useState(0);
     const [my_turn, setmy_turn] = useState(false);
+    const [my_roll_dice, setmy_roll_dice] = useState(false);
+    const [my_end_turn, setmy_end_turn] = useState(false);
     const [my_position, setmy_position] = useState<Position>();
+    const [errormessage, seterrormessage] = useState("");
+    const [error, seterror] = useState(false);
     const [allpieces, setallPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
     const [pieces, setPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
     const [boughtstreets, setboughtstreets] = useState<Street[]>();
@@ -173,14 +185,16 @@ export default function App() {
 
     const searchmatch = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/matches/searchMatch`, {
                 method: "POST",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -247,6 +261,8 @@ export default function App() {
                 message = message.match;
                 
                 setmy_turn(mynumberref === Math.abs(message.isActive))
+                setmy_roll_dice(mynumberref === message.isActive);
+                setmy_end_turn((mynumberref * -1) === message.isActive);
 
                 if (message.creater && message.creater.figure > 0){
                     if(mynumberref === 1) {
@@ -260,7 +276,14 @@ export default function App() {
                         copy[message.creater.figure - 1] = "";
                         return copy;
                     });
-                    positions[0] = decodeposition(message.creater.position, allpieces[message.creater.figure - 1]) || positions[0];
+                    setPositions((prev: Position[]) => {
+                        const copy = [...prev];
+                        copy[0] = decodeposition(
+                            message.creater.position,
+                            allpieces[message.creater.figure - 1]
+                        ) || copy[0];
+                        return copy;
+                    });
                 }
 
                 if (message.secondplayer && message.secondplayer.figure > 0){
@@ -275,7 +298,14 @@ export default function App() {
                         copy[message.secondplayer.figure - 1] = "";
                         return copy;
                     });
-                    positions[1] = decodeposition(message.secondplayer.position, allpieces[message.secondplayer.figure - 1]) || positions[1];
+                    setPositions((prev: Position[]) => {
+                        const copy = [...prev];
+                        copy[1] = decodeposition(
+                            message.secondplayer.position,
+                            allpieces[message.secondplayer.figure - 1]
+                        ) || copy[1];
+                        return copy;
+                    });
                 }
 
                 if (message.thirdplayer && message.thirdplayer.figure > 0){
@@ -290,7 +320,14 @@ export default function App() {
                         copy[message.thirdplayer.figure - 1] = "";
                         return copy;
                     });
-                    positions[2] = decodeposition(message.thirdplayer.position, allpieces[message.thirdplayer.figure - 1]) || positions[2];
+                    setPositions((prev: Position[]) => {
+                        const copy = [...prev];
+                        copy[2] = decodeposition(
+                            message.thirdplayer.position,
+                            allpieces[message.thirdplayer.figure - 1]
+                        ) || copy[2];
+                        return copy;
+                    });
                 }
 
                 if (message.fourthplayer && message.fourthplayer.figure > 0){
@@ -305,7 +342,14 @@ export default function App() {
                         copy[message.fourthplayer.figure - 1] = "";
                         return copy;
                     });
-                    positions[3] = decodeposition(message.fourthplayer.position, allpieces[message.fourthplayer.figure - 1]) || positions[3];
+                    setPositions((prev: Position[]) => {
+                        const copy = [...prev];
+                        copy[3] = decodeposition(
+                            message.fourthplayer.position,
+                            allpieces[message.fourthplayer.figure - 1]
+                        ) || copy[3];
+                        return copy;
+                    });
                 }
 
                 setis_in_Search(mynumberref === 0 ? positions[mynumberref - 1].figure === "" : is_in_Search);
@@ -321,14 +365,16 @@ export default function App() {
 
     const setfigure = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/users/setfigure?figure=${chose_figure + 1}`, {
                 method: "POST",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -345,14 +391,16 @@ export default function App() {
 
     const getnumber = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/users/users/mynumber`, {
                 method: "GET",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -368,15 +416,16 @@ export default function App() {
 
     const makeMove = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/matches/makeMove`, {
                 method: "GET",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
-
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -404,7 +453,7 @@ export default function App() {
         }
 
         if (x === 10 && y > 0 && y <= 10) {
-            return 31 + y;
+            return 30 + y;
         }
 
         throw new Error("Ungültige Position");
@@ -412,15 +461,16 @@ export default function App() {
 
     const buystreet = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/streets/buystreet/${encodePosition(showPosition)}`, {
                 method: "POST",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
-
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -433,15 +483,16 @@ export default function App() {
 
     const buybuilding = async (kind: string) => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/streets/buybuilding/${encodePosition(showPosition)}/${kind}`, {
                 method: "POST",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
-
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -454,15 +505,16 @@ export default function App() {
 
     const endturn = async () => {
         try {
+            seterror(false);
             const response = await fetch(`http://localhost:8080/matches/endTurn`, {
                 method: "GET",
                 credentials: "include"
             });
 
             if (!response.ok) { 
-                await response.json(); 
-                console.error(`Fehler beim Logout`);
-
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
                 return; 
             }
 
@@ -496,7 +548,7 @@ export default function App() {
             new Field("-Nord-\nbahnhof", train, 200),
             new Field("-Lessing-\nstrasse", "yellow", 260),
             new Field("-Schiller-\nstrasse", "yellow", 260),
-            new Field("Wasserwerk", water, 150, true),
+            new Field("Wasserwerk", water, 150),
             new Field("-Goethe-\nstrasse", "yellow", 280),
             new Field("Ins\nGefängnis\ngehen", gotoJail, 0, true),
         ],
@@ -586,6 +638,7 @@ export default function App() {
             {is_in_Match && <div className="table-container" > 
             <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
             <p>Mein verbleibendes Geld: {mymoney}</p>
+            {error && <p>{errormessage}</p>}
             <table style={{ borderCollapse: "collapse" }}>
             <tbody>
                 {fields.map((row, rowIndex) => (
@@ -598,10 +651,10 @@ export default function App() {
                         field = showField;
                     }
                     if(rowIndex == 4 && indexField == 4){
-                        field = new Field(my_turn ? "würfeln" : "---", "roll", 0);
+                        field = new Field(my_turn && my_roll_dice ? "würfeln" : "---", "roll", 0);
                     }
                     if(rowIndex == 4 && indexField == 6){
-                        field = new Field(my_turn ? "Zug beenden" : "---", "endturn", 0);
+                        field = new Field(my_turn && my_end_turn ? "Zug beenden" : "---", "endturn", 0);
                     }
                     if(rowIndex == 5 && indexField == 4 && (showField.name).includes("strasse")){
                         field = new Field("Hotel bauen", "hotel", housecost(new Position(showPosition.x, showPosition.y, "")));
@@ -628,13 +681,13 @@ export default function App() {
                         <td onClick={() => {
                             if(field.color && field.color !== "not clickable" && !(rowIndex == 4 && indexField == 5))
                             {
-                                if(field.color === "roll" && my_turn){
+                                if(field.color === "roll" && my_turn && my_roll_dice){
                                     makeMove();
                                 }
                                 if(field.color === "buy" && my_turn){
                                     buystreet();
                                 }
-                                if(field.color === "endturn" && my_turn){
+                                if(field.color === "endturn" && my_turn && my_end_turn){
                                     endturn();
                                 }
                                 if(field.color === "hotel" && my_turn){
@@ -717,7 +770,7 @@ export default function App() {
                         {/* Preis */}
                         {field.price !== 0 && (
                             <div style={{ whiteSpace: "pre-line", fontSize: "12px", color: "black" }}>
-                            {boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.price : field.price}€
+                            {boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? (boughtstreet.price === 0 ? "variable" : boughtstreet.price + "€") : (field.price + "€")}
                             </div>
                         )}
                         </td>

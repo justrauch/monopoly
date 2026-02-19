@@ -22,11 +22,9 @@ import house from "./assets/house.png"
 import hotel from "./assets/hotel.png"
 
 // TODO's
-// sell street/houses immer -1 house/hotel oder strasse wenn keine gebäude 
-// kaufen/bauen/interagieren zu einem button zusammenfassen 
-// Specialfelder
-//  Gefängnis
-//  Gameoverregeln
+// Anzeigen ich bin dran und move in die mitte
+// Gefängnis
+// Gameoverregeln
 
 
 class Field {
@@ -93,7 +91,7 @@ const encodePosition = (pos: Position): number => {
     }
 
     if (x === 10 && y > 0 && y <= 10) {
-        return 31 + y;
+        return 30 + y;
     }
 
     throw new Error("Ungültige Position");
@@ -153,6 +151,7 @@ export default function App() {
     const [my_roll_dice, setmy_roll_dice] = useState(false);
     const [my_end_turn, setmy_end_turn] = useState(false);
     const [my_position, setmy_position] = useState<Position>();
+    const [move, setmove] = useState("");
     const [errormessage, seterrormessage] = useState("");
     const [error, seterror] = useState(false);
     const [allpieces, setallPieces] = useState<string[]>([penguin, ship, fingerhat, car]);
@@ -428,35 +427,12 @@ export default function App() {
                 seterror(true);
                 return; 
             }
-
             const message = await response.json();
+            setmove("Würfel 1: " + message.dice1 + " \nWürfel 2: " + message.dice2 + (message.cardtext ? " \nKarte : " + message.cardtext : ""))
 
         } catch (error) {
             console.error(`Fehler beim Logout:`, error);
         }
-    };
-
-    const encodePosition = (pos: Position): number => {
-        var x = pos.y;
-        var y = pos.x;
-
-        if (y === 10 && x >= 0 && x <= 10) {
-            return 10 - x;
-        }
-
-        if (x === 0 && y >= 0 && y < 10) {
-            return 20 - y;
-        }
-
-        if (y === 0 && x > 0 && x <= 10) {
-            return 20 + x;
-        }
-
-        if (x === 10 && y > 0 && y <= 10) {
-            return 30 + y;
-        }
-
-        throw new Error("Ungültige Position");
     };
 
     const buystreet = async () => {
@@ -481,10 +457,54 @@ export default function App() {
         }
     };
 
+    const sellstreet = async () => {
+        try {
+            seterror(false);
+            const response = await fetch(`http://localhost:8080/streets/sellstreet/${encodePosition(showPosition)}`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
     const buybuilding = async (kind: string) => {
         try {
             seterror(false);
             const response = await fetch(`http://localhost:8080/streets/buybuilding/${encodePosition(showPosition)}/${kind}`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const sellbuilding = async (kind: string) => {
+        try {
+            seterror(false);
+            const response = await fetch(`http://localhost:8080/streets/sellbuilding/${encodePosition(showPosition)}/${kind}`, {
                 method: "POST",
                 credentials: "include"
             });
@@ -638,7 +658,15 @@ export default function App() {
             {is_in_Match && <div className="table-container" > 
             <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
             <p>Mein verbleibendes Geld: {mymoney}</p>
-            {error && <p>{errormessage}</p>}
+            <p>
+            {move.split("\n").map((line, i) => (
+                <span key={i}>
+                {line}
+                <br />
+                </span>
+            ))}
+            </p>
+            {error && <p style={{color: "red"}}>{errormessage}</p>}
             <table style={{ borderCollapse: "collapse" }}>
             <tbody>
                 {fields.map((row, rowIndex) => (
@@ -647,36 +675,42 @@ export default function App() {
 
                     var boughtstreet = boughtstreets?.find((s) => s.index.y == indexField && s.index.x == rowIndex);
                     
+                    var boughtshowstreet = boughtstreets?.find((s) => s.index.y == showPosition.y && s.index.x == showPosition.x);
+
                     if(rowIndex == 4 && indexField == 5){
                         field = showField;
                     }
+
                     if(rowIndex == 4 && indexField == 4){
                         field = new Field(my_turn && my_roll_dice ? "würfeln" : "---", "roll", 0);
                     }
                     if(rowIndex == 4 && indexField == 6){
                         field = new Field(my_turn && my_end_turn ? "Zug beenden" : "---", "endturn", 0);
                     }
-                    if(rowIndex == 5 && indexField == 4 && (showField.name).includes("strasse")){
-                        field = new Field("Hotel bauen", "hotel", housecost(new Position(showPosition.x, showPosition.y, "")));
-                    }
-                    if(rowIndex == 6 && indexField == 4 && (showField.name).includes("strasse")){
-                        field = new Field("Haus bauen", "house", housecost(new Position(showPosition.x, showPosition.y, "")));
-                    }
+
                     if(rowIndex == 5 && indexField == 5){
-                        field = new Field(showField.isspecial ? "interagieren" : "bezahlen", "clickable", boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? -boughtstreet.price : -showField.price * 0.1);
+                        let enc_index = boughtshowstreet ? encodePosition(boughtshowstreet.index) : -1;
+                        if (showField.isspecial){
+                            field = new Field("interagieren", "interact", 0);
+                        }
+                        else if (!boughtshowstreet){
+                            field = new Field("kaufen", "buy", showField.price);
+                        }
+                        else if (boughtshowstreet.hotel <= 0 && boughtshowstreet.owner == mynumber && ((enc_index) != 5 && enc_index != 15 && enc_index != 25 && enc_index != 35 && enc_index != 12 && enc_index != 28)){
+                            field = new Field("bauen", "build", housecost(new Position(showPosition.x, showPosition.y, "")));
+                        }
+                        else {
+                            field = new Field("tauschen", "trade", 0);
+                        }
                     }
-                    if(rowIndex == 6 && indexField == 5 && !showField.isspecial){
-                        field = new Field("tauschen", "clickable", 0);
+
+                    if(rowIndex == 6 && indexField == 5 && !showField.isspecial && boughtshowstreet){
+                        let fieldpos = boughtshowstreet.index;
+                        field = new Field("verkaufen", "sell", boughtshowstreet.hotel + boughtshowstreet.house > 0 ? housecost(new Position(showPosition.x, showPosition.y, "")) / 2 : fields[fieldpos.x][fieldpos.y].price / 2);
                     }
-                    if(rowIndex == 5 && indexField == 6 && !showField.isspecial){
-                        field = new Field("kaufen", "buy", boughtstreet && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex ? boughtstreet.price : showField.price);
-                    }
-                    if(rowIndex == 6 && indexField == 6 && !showField.isspecial){
-                        field = new Field("verkaufen", "clickable", 0);
-                    }
+
                     const isImage = field.color.startsWith("/src");
                     
-
                     return (
                         <td onClick={() => {
                             if(field.color && field.color !== "not clickable" && !(rowIndex == 4 && indexField == 5))
@@ -684,20 +718,36 @@ export default function App() {
                                 if(field.color === "roll" && my_turn && my_roll_dice){
                                     makeMove();
                                 }
-                                if(field.color === "buy" && my_turn){
-                                    buystreet();
-                                }
                                 if(field.color === "endturn" && my_turn && my_end_turn){
                                     endturn();
                                 }
-                                if(field.color === "hotel" && my_turn){
-                                    buybuilding("hotel");
-                                }
-                                if(field.color === "house" && my_turn){
-                                    buybuilding("house");
-                                }
-                                if(field.color === "clickable"){
+                                if(field.color === "trade" && my_turn){
 
+                                } 
+                                if(field.color === "sell" && my_turn && boughtshowstreet){
+                                    if (boughtshowstreet.hotel > 0){
+                                        sellbuilding("hotel");
+                                    }
+                                    else if (boughtshowstreet.house > 0){
+                                        sellbuilding("house");
+                                    }
+                                    else {
+                                        sellstreet();
+                                    }
+                                }  
+                                if(field.color === "interact" && my_turn){
+
+                                }                               
+                                if(field.color === "buy" && my_turn){
+                                    buystreet();
+                                }
+                                if(field.color === "build" && my_turn && boughtshowstreet && boughtshowstreet.hotel <= 0){
+                                    if (boughtshowstreet.house <= 3){
+                                        buybuilding("house");
+                                    }
+                                    else if (boughtshowstreet.house == 4){
+                                        buybuilding("hotel");
+                                    }
                                 }
                                 else if (((!boughtstreet && my_position && my_position.x == rowIndex && my_position.y == indexField) || boughtstreet?.owner == mynumber)){
                                     setshowField(fields[rowIndex][indexField]);
@@ -738,7 +788,7 @@ export default function App() {
                         )}
 
                         {/* Farbband */}
-                        {!isImage && field.color && !field.color.includes("clickable") && !field.color.includes("roll") && !field.color.includes("house") && !field.color.includes("hotel") && !field.color.includes("endturn") && !field.color.includes("buy") && (
+                        {!isImage && field.color && !field.color.includes("trade") && !field.color.includes("roll") && !field.color.includes("interact") && !field.color.includes("build") && !field.color.includes("sell") && !field.color.includes("endturn") && !field.color.includes("endturn") && !field.color.includes("buy") && (
                             <div 
                                 style={{
                                     backgroundColor: field.color,

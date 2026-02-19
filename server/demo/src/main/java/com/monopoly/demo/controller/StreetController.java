@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
 
+import java.io.Console;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -93,41 +94,39 @@ public class StreetController {
 
     public static final Map<Integer, int[]> RENT_TABLE = Map.ofEntries(
 
-    Map.entry(1,  new int[]{2, 4, 10, 30, 90, 160, 250}), // Badstraße
-    Map.entry(3,  new int[]{4, 8, 20, 60, 180, 320, 450}), // Turmstraße
+        Map.entry(1,  new int[]{2, 4, 10, 30, 90, 160, 250}), // Badstraße
+        Map.entry(3,  new int[]{4, 8, 20, 60, 180, 320, 450}), // Turmstraße
 
-    Map.entry(6,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Chausseestraße
-    Map.entry(8,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Elisenstraße
-    Map.entry(9,  new int[]{8, 16, 40, 100, 300, 450, 600}), // Poststraße
+        Map.entry(6,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Chausseestraße
+        Map.entry(8,  new int[]{6, 12, 30, 90, 270, 400, 550}), // Elisenstraße
+        Map.entry(9,  new int[]{8, 16, 40, 100, 300, 450, 600}), // Poststraße
 
-    Map.entry(11, new int[]{10, 20, 50, 150, 450, 625, 750}), // Seestraße
-    Map.entry(13, new int[]{10, 20, 50, 150, 450, 625, 750}), // Hafenstraße
-    Map.entry(14, new int[]{12, 24, 60, 180, 500, 700, 900}), // Neue Straße
+        Map.entry(11, new int[]{10, 20, 50, 150, 450, 625, 750}), // Seestraße
+        Map.entry(13, new int[]{10, 20, 50, 150, 450, 625, 750}), // Hafenstraße
+        Map.entry(14, new int[]{12, 24, 60, 180, 500, 700, 900}), // Neue Straße
 
-    Map.entry(16, new int[]{14, 28, 70, 200, 550, 750, 950}), // Münchener Straße
-    Map.entry(18, new int[]{14, 28, 70, 200, 550, 750, 950}), // Wiener Straße
-    Map.entry(19, new int[]{16, 32, 80, 220, 600, 800, 1000}), // Berliner Straße
+        Map.entry(16, new int[]{14, 28, 70, 200, 550, 750, 950}), // Münchener Straße
+        Map.entry(18, new int[]{14, 28, 70, 200, 550, 750, 950}), // Wiener Straße
+        Map.entry(19, new int[]{16, 32, 80, 220, 600, 800, 1000}), // Berliner Straße
 
-    Map.entry(21, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Theaterstraße
-    Map.entry(23, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Museumstraße
-    Map.entry(24, new int[]{20, 40, 100, 300, 750, 925, 1100}), // Opernplatz
+        Map.entry(21, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Theaterstraße
+        Map.entry(23, new int[]{18, 36, 90, 250, 700, 875, 1050}), // Museumstraße
+        Map.entry(24, new int[]{20, 40, 100, 300, 750, 925, 1100}), // Opernplatz
 
-    Map.entry(26, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Lessingstraße
-    Map.entry(27, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Schillerstraße
-    Map.entry(29, new int[]{24, 48, 120, 360, 850, 1025, 1200}), // Goethestraße
+        Map.entry(26, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Lessingstraße
+        Map.entry(27, new int[]{22, 44, 110, 330, 800, 975, 1150}), // Schillerstraße
+        Map.entry(29, new int[]{24, 48, 120, 360, 850, 1025, 1200}), // Goethestraße
 
-    Map.entry(31, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Rathausplatz
-    Map.entry(32, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Hauptstraße
-    Map.entry(34, new int[]{28, 56, 150, 450, 1000, 1200, 1400}), // Bahnhofstraße
+        Map.entry(31, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Rathausplatz
+        Map.entry(32, new int[]{26, 52, 130, 390, 900, 1100, 1275}), // Hauptstraße
+        Map.entry(34, new int[]{28, 56, 150, 450, 1000, 1200, 1400}), // Bahnhofstraße
 
-    Map.entry(37, new int[]{35, 70, 175, 500, 1100, 1300, 1500}), // Parkstraße
-    Map.entry(39, new int[]{50, 100, 200, 600, 1400, 1700, 2000}) // Schlossallee
-);
+        Map.entry(37, new int[]{35, 70, 175, 500, 1100, 1300, 1500}), // Parkstraße
+        Map.entry(39, new int[]{50, 100, 200, 600, 1400, 1700, 2000}) // Schlossallee
+    );
 
-
-    // fixe Preis
     @PostMapping("/buystreet/{index}")
-    public ResponseEntity<String> getStreet(@PathVariable Integer index, HttpSession session) {
+    public ResponseEntity<String> buystreet(@PathVariable Integer index, HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
 
         if (userId == null) {
@@ -177,10 +176,11 @@ public class StreetController {
                 if (!BOARD[index].isSpecial)
                 {
                     double perc = sservice.getOwnershipPercentByIndex(user, index);
-                    if (((index <= 3 || index >= 37) && perc == 50.0) || perc == (2.0 / 3)){
+                    if (((index <= 3 || index >= 37) && perc >= 50.0) || perc >= (2.0 / 3)){
                         newstreet.setPrice((int)(RENT_TABLE.get(index)[1]));
                         for (Street s : sservice.getallstreetsofanindex(index)){
                             s.setPrice(RENT_TABLE.get(s.getIndex())[1]);
+                            srepository.save(s);
                         }
                     }
                     else {
@@ -213,11 +213,81 @@ public class StreetController {
         }
     }
 
-    @PostMapping("/buybuilding/{index}/{kind}")
-    public ResponseEntity<String> getStreet(@PathVariable Integer index, @PathVariable String kind, HttpSession session) {
+    @PostMapping("/sellstreet/{index}")
+    public ResponseEntity<String> sellstreet(@PathVariable Integer index, HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
 
-        if (!"hotelhouse".contains(kind)) {
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.status(404).body("No active match found");
+        }
+
+        Match match = matches.get(0);
+
+        if (match.getWinner() != null){
+            return ResponseEntity.status(404).body("Game is over");
+        }
+
+        Optional<Street> streetOpt = srepository.findByMatchIdAndStreetIndex(match.getId(), index);
+
+        if (!BOARD[index].canBeBought){
+            return ResponseEntity.status(404).body("Straße kann nicht verkauft werden");
+        }
+        else if (index >= BOARD.length || index < 0) {
+            return ResponseEntity.status(404).body("Index ungültig");
+        }
+        else if (streetOpt.isEmpty()){
+            return ResponseEntity.status(404).body("Straße exestiert nicht");
+        }
+        else {
+            try {
+                Street street = streetOpt.get();
+                if (!BOARD[index].isSpecial)
+                {
+                    for (Street s : sservice.getallstreetsofanindex(index)){
+                        s.setPrice(RENT_TABLE.get(s.getIndex())[0]);
+                        srepository.save(s);
+                    }
+                }
+                // Bahnhöfe
+                else if (index == 5 || index == 15 || index == 25 || index == 35) {
+                    double stationsOwned = sservice.getOwnershipPercentByIndex(user, index);
+                    for (Street s : sservice.getallstreetsofanindex(index)){
+                        s.setPrice((int) (25 * ((stationsOwned - 25.0) / 100.0) * 4));
+                    }
+                } 
+
+
+                user.setMoney(user.getMoney() + BOARD[index].price / 2);
+                urepository.save(user);
+                srepository.delete(street);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.status(500).body("Fehler beim Speichern: " + e.getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body("Straße gekauft");
+        }
+    }
+
+    @PostMapping("/buybuilding/{index}/{kind}")
+    public ResponseEntity<String> buybuilding(@PathVariable Integer index, @PathVariable String kind, HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (!("hotel".equals(kind) || "house".equals(kind))) {
             return ResponseEntity.status(401).body("Art des Gebäudes falsch");
         }
 
@@ -262,7 +332,7 @@ public class StreetController {
 
         Street street = streetOpt.get();
 
-        if (street.getHotels() == 1){
+        if (street.getHotels() >= 1){
             return ResponseEntity.status(404).body("Maximal 1 Hotel pro Strasse");
         }
         if (kind.equals("house") && street.getHouses() == 4){
@@ -281,15 +351,16 @@ public class StreetController {
             return ResponseEntity.status(404).body("Du musst zu erst alle Straßen dieser Farbe besitzen");
         }
         else {
-            if (kind.equals("house"))
-            {
-                int diff = street.getHouses() + 1;
-                for (Street s : sservice.getallstreetsofanindex(index)){
-                    if (Math.abs(diff - s.getHouses()) > 1){
-                        return ResponseEntity.status(404).body("Du musst die Häuser gleichmäßig bauen");
-                    }
+            int diff = kind.equals("hotel") ? (street.getHotels() + 1) * 5 : street.getHouses() + 1;
+
+            for (Street s : sservice.getallstreetsofanindex(index)) {
+                int other = s.getHotels() != 0 ? s.getHotels() * 5 : s.getHouses();
+                if (Math.abs(diff - other) > 1) {
+                    return ResponseEntity.status(404)
+                        .body("Du musst die Häuser gleichmäßig bauen");
                 }
             }
+
             int price = 0;
             if (index == 1 || index == 3 || index == 6 || index == 8 || index == 9) {
                 price = 50;
@@ -349,6 +420,143 @@ public class StreetController {
             urepository.save(user);
             srepository.save(street);
             return ResponseEntity.status(HttpStatus.CREATED).body(kind + " gekauft");
+        }
+    }
+
+    @PostMapping("/sellbuilding/{index}/{kind}")
+    public ResponseEntity<String> sellbuilding(@PathVariable Integer index, @PathVariable String kind, HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (!("hotel".equals(kind) || "house".equals(kind))) {
+            return ResponseEntity.status(401).body("Art des Gebäudes falsch");
+        }
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.status(404).body("No active match found");
+        }
+
+        Match match = matches.get(0);
+
+        if (match.getIsActive() > 0){
+            return ResponseEntity.status(404).body("Du musst zuerst würfeln");
+        }
+
+        if ((match.getIsActive() * - 1) != user.getTurn_number()){
+            return ResponseEntity.status(404).body("Du bist nicht dran");
+        }
+
+        if (match.getWinner() != null){
+            return ResponseEntity.status(404).body("Game is over");
+        }
+
+        Optional<Street> streetOpt = srepository.findByMatchIdAndStreetIndex(match.getId(), index);
+
+        if (streetOpt.isEmpty()){
+            return ResponseEntity.status(404).body("Straße wurde noch nicht gekauft");
+        }
+
+        Street street = streetOpt.get();
+
+        if ("hotel".equals(kind) && street.getHotels() <= 0) {
+            return ResponseEntity.status(404).body("Kein Hotel zu verkaufen");
+        }
+
+        if ("house".equals(kind) && street.getHouses() <= 0) {
+            return ResponseEntity.status(404).body("Kein Haus zu verkaufen");
+        }
+        if (street.getIsSpecial()){
+            return ResponseEntity.status(404).body("Hier kann kein gebäude verkauft werden");
+        }
+        else if (index >= BOARD.length || index < 0) {
+            return ResponseEntity.status(404).body("Index ungültig");
+        }
+        else if (street.getOwner() != user){
+            return ResponseEntity.status(404).body("Die Straße gehört dir nicht");
+        }
+        else if (!(sservice.getOwnershipPercentByIndex(user, index) == 100.0)){
+            return ResponseEntity.status(404).body("Du musst zu erst alle Straßen dieser Farbe besitzen");
+        }
+        else {
+            int diff = kind.equals("hotel") ? (street.getHotels() - 1) + 4 : street.getHouses() - 1;
+
+            for (Street s : sservice.getallstreetsofanindex(index)) {
+                int other = s.getHotels() != 0 ? s.getHotels() * 5 : s.getHouses();
+                if (Math.abs(diff - other) > 1) {
+                    return ResponseEntity.status(404)
+                        .body("Du musst die Häuser gleichmäßig bauen");
+                }
+            }
+
+            int price = 0;
+            if (index == 1 || index == 3 || index == 6 || index == 8 || index == 9) {
+                price = 50;
+            }
+
+            else if (index == 11 || index == 13 || index == 14 || index == 16 || index == 18 || index == 19) {
+                price = 100;
+            }
+
+            else if (index == 21 || index == 23 || index == 24 || index == 26 || index == 27 || index == 29) {
+                price = 150;
+            }
+
+            else if (index == 31 || index == 32 || index == 34 || index == 37 || index == 39) {
+                price = 200;
+            }
+
+            else {
+                return ResponseEntity.status(404).body("Index ungültig");
+            }
+
+            if ("hotel".equals(kind)) {
+                if(street.getHotels() >= 1){
+                    street.setHouses(street.getHouses() + 4);
+                    street.setHotels(street.getHotels() - 1);
+                }
+                else{
+                    return ResponseEntity.status(404).body("Hier steht kein Hotel");
+                }
+            }
+
+            else if ("house".equals(kind)) {
+                street.setHouses(street.getHouses() - 1);
+            }
+
+            user.setMoney(user.getMoney() + price/2);
+
+            int newPosition = index;
+            int rent = 0;
+
+            int[] rents = RENT_TABLE.get(index);
+            if (street.getHotels() > 0) {
+                rent = rents[6];
+            } else if (street.getHouses() > 0) {
+                rent = rents[street.getHouses() + 1];
+            } else if (sservice.getOwnershipPercentByIndex(street.getOwner(), newPosition) == 1) {
+                rent = rents[1];
+            } else {
+                rent = rents[0];
+            }
+
+            street.setPrice(rent);
+            urepository.save(user);
+            srepository.save(street);
+            return ResponseEntity.status(HttpStatus.CREATED).body(kind + " verkauft");
         }
     }
 }

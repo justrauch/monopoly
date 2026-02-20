@@ -147,8 +147,12 @@ export default function App() {
     const [chose_figure, setchose_figure] = useState(0);
     const [mynumber, setmynumber] = useState(0);
     const [mymoney, setmymoney] = useState(0);
+    const [com_money, setcom_money] = useState(0);
+    const [prison, setprison] = useState(0);
     const [my_turn, setmy_turn] = useState(false);
+    const [winner, setwinner] = useState(false);
     const [my_roll_dice, setmy_roll_dice] = useState(false);
+    const [match_started, setmatch_started] = useState(false);
     const [my_end_turn, setmy_end_turn] = useState(false);
     const [my_position, setmy_position] = useState<Position>();
     const [move, setmove] = useState("");
@@ -262,6 +266,8 @@ export default function App() {
                 setmy_turn(mynumberref === Math.abs(message.isActive))
                 setmy_roll_dice(mynumberref === message.isActive);
                 setmy_end_turn((mynumberref * -1) === message.isActive);
+                setcom_money(message.communityMoney);
+                setmatch_started(message.isActive != 0);
 
                 if (message.creater && message.creater.figure > 0){
                     if(mynumberref === 1) {
@@ -269,6 +275,8 @@ export default function App() {
                         setmy_position(new Position(pos.x, pos.y, "")); 
                         setis_in_Match(true); 
                         setmymoney(message.creater.money);
+                        setprison(message.creater.prison_Sentence);
+                        setwinner(message.winner && message.winner.turn_number == mynumberref);
                     }
                     setPieces(prev => {
                         const copy = [...prev];
@@ -291,6 +299,8 @@ export default function App() {
                         setmy_position(new Position(pos.x, pos.y, "")); 
                         setis_in_Match(true); 
                         setmymoney(message.secondplayer.money);
+                        setprison(message.secondplayer.prison_Sentence);
+                        setwinner(message.winner && message.winner.turn_number == mynumberref);
                     }
                     setPieces(prev => {
                         const copy = [...prev];
@@ -313,7 +323,10 @@ export default function App() {
                         setmy_position(new Position(pos.x, pos.y, "")); 
                         setis_in_Match(true); 
                         setmymoney(message.thirdplayer.money);
+                        setprison(message.thirdplayer.prison_Sentence);
+                        setwinner(message.winner && message.winner.turn_number == mynumberref);
                     }
+                    
                     setPieces(prev => {
                         const copy = [...prev];
                         copy[message.thirdplayer.figure - 1] = "";
@@ -335,6 +348,8 @@ export default function App() {
                         setmy_position(new Position(pos.x, pos.y, "")); 
                         setis_in_Match(true); 
                         setmymoney(message.fourthplayer.money);
+                        setprison(message.fourthplayer.prison_Sentence);
+                        setwinner(message.winner && message.winner.turn_number == mynumberref);
                     }
                     setPieces(prev => {
                         const copy = [...prev];
@@ -545,6 +560,72 @@ export default function App() {
         }
     };
 
+    const endMatch = async () => {
+        try {
+            seterror(false);
+            const response = await fetch(`http://localhost:8080/matches/endMatch`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const surrender = async () => {
+        try {
+            seterror(false);
+            const response = await fetch(`http://localhost:8080/matches/surrender`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
+    const startmatch = async () => {
+        try {
+            seterror(false);
+            const response = await fetch(`http://localhost:8080/matches/startMatch`, {
+                method: "GET",
+                credentials: "include"
+            });
+
+            if (!response.ok) { 
+                const bodyText = await response.text();
+                seterrormessage(bodyText)
+                seterror(true);
+                return; 
+            }
+
+            const message = await response.json();
+
+        } catch (error) {
+            console.error(`Fehler beim Logout:`, error);
+        }
+    };
+
     useEffect(() => {
 
         getnumber();
@@ -560,7 +641,7 @@ export default function App() {
     // Beispiel-Daten
     const fields: Field[][] = [
         [
-            new Field("Free Parking", freeParking, 0, true),
+            new Field("Free Parking", freeParking, com_money, true),
             new Field("-Theater-\nstrasse", "red", 220),
             new Field("Ereignisfeld", questionmarkRed, 0, true),
             new Field("-Museum-\nstrasse", "red", 220),
@@ -635,7 +716,11 @@ export default function App() {
     return (
         <div>
             {/* Logout */}
-            <button onClick={logout}>Abmelden</button> {loading && <p>loading</p>}{!loading && <div>
+            <button onClick={logout}>Abmelden</button> 
+            {match_started && <div> <button onClick={surrender}>Aufgeben</button>
+            <button onClick={endMatch}>Spiel beenden</button> </div>}
+            {!match_started && <button onClick={startmatch}>StartMatch</button>}
+            {loading && <p>loading</p>}{!loading && <div>
             {!is_in_Match && <div>
                     {!is_in_Search && <button onClick={searchmatch}>Match suchen</button>}
                     {is_in_Search && <div className="form-column"><p>Wähle eine Figur</p>
@@ -656,17 +741,6 @@ export default function App() {
                 </div>
             }
             {is_in_Match && <div className="table-container" > 
-            <p>{my_turn ? "ich bin dran :->" : "ich bin nicht dran T.T"}</p>
-            <p>Mein verbleibendes Geld: {mymoney}</p>
-            <p>
-            {move.split("\n").map((line, i) => (
-                <span key={i}>
-                {line}
-                <br />
-                </span>
-            ))}
-            </p>
-            {error && <p style={{color: "red"}}>{errormessage}</p>}
             <table style={{ borderCollapse: "collapse" }}>
             <tbody>
                 {fields.map((row, rowIndex) => (
@@ -688,10 +762,26 @@ export default function App() {
                         field = new Field(my_turn && my_end_turn ? "Zug beenden" : "---", "endturn", 0);
                     }
 
+                    if(rowIndex == 6 && indexField == 6){
+                        field = new Field("Gefängnisstatus: " + (prison == -1 ? "Gefängnisfrei Karte" : (prison == 0 ? "Frei" : ("Runden bis Frei: " + prison))), "", 0);
+                    }
+
+                    if(rowIndex == 6 && indexField == 4){
+                        field = new Field(move, "", 0);
+                    }
+
+                    if(rowIndex == 5 && indexField == 6){
+                        field = new Field("Mein verbleibendes Geld :" + mymoney, "", 0);
+                    }
+
+                    if(rowIndex == 5 && indexField == 4){
+                        field = new Field((winner ? "!!!Gewonnen!!!" : (my_turn ? "Ich bin dran!" : "Ich bin nicht dran!")), "", 0);
+                    }
+
                     if(rowIndex == 5 && indexField == 5){
                         let enc_index = boughtshowstreet ? encodePosition(boughtshowstreet.index) : -1;
                         if (showField.isspecial){
-                            field = new Field("interagieren", "interact", 0);
+                            field = new Field("---", "interact", 0);
                         }
                         else if (!boughtshowstreet){
                             field = new Field("kaufen", "buy", showField.price);
@@ -700,7 +790,7 @@ export default function App() {
                             field = new Field("bauen", "build", housecost(new Position(showPosition.x, showPosition.y, "")));
                         }
                         else {
-                            field = new Field("tauschen", "trade", 0);
+                            field = new Field("---", "trade", 0);
                         }
                     }
 
@@ -762,15 +852,19 @@ export default function App() {
                             border: "1px solid black",
                             textAlign: "center",
                             padding: "6px",
-                            backgroundColor: boughtstreet && boughtstreet.owner == mynumber && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex 
-                                ? "green" 
+                            backgroundColor: 
+                                my_position && my_position.y == indexField && my_position.x == rowIndex 
+                                ? "green" :
+                                boughtstreet && boughtstreet.owner == mynumber && boughtstreet.index.y == indexField && boughtstreet.index.x == rowIndex 
+                                ? "orange" 
                                 : ( field.color ? "#f5f5f5" 
                                 : (rowIndex > 3 && rowIndex < 7 && indexField > 3 && indexField < 7
                                     ? "grey"
                                     : "black"))
                         }}
                         >
-
+                        {error && rowIndex == 3 && indexField == 5 && <div style={{color: "red"}}>{errormessage}</div>}
+                        
                         <div className="container">
                             {positions.map((p, i) => 
                                 rowIndex === p.x && indexField === p.y ? (

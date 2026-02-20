@@ -33,7 +33,7 @@ class User(Base):
     position = Column(Integer, nullable=False, default=0)
     figure = Column(Integer, nullable=False, default=0)
 
-    #prison_sentence = Column(Integer, nullable=False, default=0)
+    prison_sentence = Column(Integer, nullable=False, default=0)
 
     # Matches
     matches_created = relationship(
@@ -71,13 +71,14 @@ class Match(Base):
 
     id = Column(Integer, primary_key=True)
 
-    creater_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    creater_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     secondplayer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     thirdplayer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     fourthplayer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     is_active = Column(Integer, nullable=False, default=0)
     winner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    community_money = Column(Integer, nullable=False, default=0)
 
     # Player relations
     creater = relationship("User", foreign_keys=[creater_id], back_populates="matches_created")

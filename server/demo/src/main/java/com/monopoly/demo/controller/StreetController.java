@@ -144,14 +144,30 @@ public class StreetController {
                 user, user, user, user
         );
 
+        if(user.getPrison_Sentence() > 0){
+            return ResponseEntity.status(404).body("Du bist im Gefängnis!");
+        }
+
         if (matches.isEmpty()) {
             return ResponseEntity.status(404).body("No active match found");
+        }
+
+        if (user.getMoney() <= 0) {
+            return ResponseEntity.status(404).body("Kein Geld mehr");
         }
 
         Match match = matches.get(0);
 
         if (match.getWinner() != null){
             return ResponseEntity.status(404).body("Game is over");
+        }
+
+        if (match.getIsActive() > 0){
+            return ResponseEntity.status(404).body("Zuerst würfeln");
+        }
+
+        if (match.getIsActive() * -1 == user.getTurn_number()){
+            return ResponseEntity.status(404).body("Du bist nicht dran");
         }
 
         Optional<Street> streetOpt = srepository.findByMatchIdAndStreetIndex(match.getId(), index);
@@ -228,6 +244,10 @@ public class StreetController {
 
         User user = userOpt.get();
 
+        if(user.getPrison_Sentence() > 0){
+            return ResponseEntity.status(404).body("Du bist im Gefängnis!");
+        }
+
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user
         );
@@ -240,6 +260,14 @@ public class StreetController {
 
         if (match.getWinner() != null){
             return ResponseEntity.status(404).body("Game is over");
+        }
+
+        if (match.getIsActive() > 0){
+            return ResponseEntity.status(404).body("Zuerst würfeln");
+        }
+
+        if (match.getIsActive() * -1 == user.getTurn_number()){
+            return ResponseEntity.status(404).body("Du bist nicht dran");
         }
 
         Optional<Street> streetOpt = srepository.findByMatchIdAndStreetIndex(match.getId(), index);
@@ -302,6 +330,14 @@ public class StreetController {
 
         User user = userOpt.get();
 
+        if(user.getPrison_Sentence() > 0){
+            return ResponseEntity.status(404).body("Du bist im Gefängnis!");
+        }
+
+        if (user.getMoney() <= 0) {
+            return ResponseEntity.status(404).body("Kein Geld mehr");
+        }
+
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user
         );
@@ -314,6 +350,10 @@ public class StreetController {
 
         if (match.getIsActive() > 0){
             return ResponseEntity.status(404).body("Du musst zuerst würfeln");
+        }
+
+        if (match.getIsActive() > 0){
+            return ResponseEntity.status(404).body("Zuerst würfeln");
         }
 
         if ((match.getIsActive() * - 1) != user.getTurn_number()){
@@ -441,6 +481,10 @@ public class StreetController {
         }
 
         User user = userOpt.get();
+
+        if(user.getPrison_Sentence() > 0){
+            return ResponseEntity.status(404).body("Du bist im Gefängnis!");
+        }
 
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user

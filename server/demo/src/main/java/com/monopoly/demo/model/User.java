@@ -19,6 +19,9 @@ public class User {
     private int position;
     private int figure;
 
+    @Column(nullable = false)
+    private int prison_sentence = 0;
+
     // Getter & Setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -40,4 +43,7 @@ public class User {
 
     public int getFigure() { return figure; }
     public void setFigure(int figure) { this.figure = figure; }
+
+    public int getPrison_Sentence() { return prison_sentence; }
+    public void setPrison_Sentence(int prison_sentence) { this.prison_sentence = prison_sentence; }
 }

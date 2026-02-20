@@ -11,7 +11,7 @@ public class Match {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "creater_id", nullable = false)
+    @JoinColumn(name = "creater_id", nullable = true)
     private User creater;
 
     @ManyToOne
@@ -28,6 +28,9 @@ public class Match {
 
     @Column(nullable = false)
     private Integer isActive;
+
+    @Column(nullable = false)
+    private Integer community_money = 0;
 
     @ManyToOne
     @JoinColumn(name = "winner_id")
@@ -72,6 +75,14 @@ public class Match {
 
     public void setFourthplayer(User fourthplayer) {
         this.fourthplayer = fourthplayer;
+    }
+
+    public Integer getCommunityMoney() {
+        return community_money;
+    }
+
+    public void setCommunityMoney(Integer community_money) {
+        this.community_money = community_money;
     }
 
     public Integer getIsActive() {

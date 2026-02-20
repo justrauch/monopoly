@@ -266,6 +266,9 @@ public class MatchController {
         if (user.getMoney() <= 0) {
             return ResponseEntity.status(404).body("Game Over!");
         }
+        if (user.getPrison_Sentence() > 0) {
+            return ResponseEntity.status(404).body("Du bist im Gefängnis!");
+        }
 
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user
@@ -293,10 +296,8 @@ public class MatchController {
         Integer isActive = match.getIsActive();
         if (isActive == null) isActive = 0;
 
-        int randomInt = 1;
-        //new Random().nextInt(6) + 1;
-        int randomInt2 = 0;
-        //new Random().nextInt(6) + 1;
+        int randomInt = new Random().nextInt(6) + 1;
+        int randomInt2 = new Random().nextInt(6) + 1;
 
         if (randomInt != randomInt2){
             pasch = false;
@@ -328,9 +329,20 @@ public class MatchController {
         Card retcard = new Card("", 0, 0, null, false, false);;
 
         if (street == null && !BOARD[newPosition].canBeBought){
-            if (BOARD[newPosition].price != null)
+            if (newPosition == 20){
+                user.setMoney(user.getMoney() + match.getCommunityMoney());
+                match.setCommunityMoney(0);
+            }
+            else if (newPosition == 30){
+                user.setPosition(10);
+                user.setPrison_Sentence(user.getPrison_Sentence() < 0 ? 0 : 3);
+            }
+            else if (BOARD[newPosition].price != null)
             {
                 user.setMoney(user.getMoney() + BOARD[newPosition].price);
+                if(BOARD[newPosition].price < 0){
+                    match.setCommunityMoney(match.getCommunityMoney() + BOARD[newPosition].price * -1);
+                }
             }
             else {
                 Card card = new Card("null", 0, 0, null, false, false);
@@ -347,6 +359,9 @@ public class MatchController {
 
                     if (card.getMoney() != null) {
                         user.setMoney(user.getMoney() + card.getMoney());
+                        if(card.getMoney() < 0){
+                            match.setCommunityMoney(match.getCommunityMoney() + card.getMoney());
+                        }
                     }
 
                     if (card.getMoveTo() != null) {
@@ -376,12 +391,12 @@ public class MatchController {
                         }
 
                         if ("jail_free".equals(card.getAction())) {
-                            // später
+                            user.setPrison_Sentence(-1);
                         }
 
                         if ("go_to_jail".equals(card.getAction())) {
                             user.setPosition(10);
-                            // später player.setInJail(true);
+                            user.setPrison_Sentence(user.getPrison_Sentence() < 0 ? 0 : 3);
                         }
 
                         if ("repairs".equals(card.getAction())) {
@@ -391,6 +406,7 @@ public class MatchController {
                                 if (s.getHotels() > 0) cost += 100;
                             }
                             user.setMoney(user.getMoney() - cost);
+                            match.setCommunityMoney(match.getCommunityMoney() + cost);
                         }
                     }
 
@@ -473,9 +489,18 @@ public class MatchController {
 
         User user = userOpt.get();
 
+        if (user.getMoney() <= 0) {
+            return ResponseEntity.status(404).body("Game Over!");
+        }
+
         List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
                 user, user, user, user
         );
+
+        if (user.getPrison_Sentence() > 0){
+            user.setPrison_Sentence(user.getPrison_Sentence() - 1);
+            urepository.save(user);
+        }
 
         if (matches.isEmpty()) {
             return ResponseEntity.ok("In Search");
@@ -487,14 +512,14 @@ public class MatchController {
             int newisActive = (user.getTurn_number() % 4) + 1;
             User tmpuser = urepository.findByTurnNumber(newisActive);
 
-            while (tmpuser == null) {
+            while (tmpuser == null || tmpuser.getMoney() <= 0) {
                 newisActive = (newisActive % 4) + 1;
                 tmpuser = urepository.findByTurnNumber(newisActive);
             }
-            match.setIsActive(newisActive);
+            match.setIsActive(newisActive * (urepository.findByTurnNumber(newisActive).getPrison_Sentence() > 0 ? -1 : 1));
         }
         else {
-            match.setIsActive(user.getTurn_number());
+            match.setIsActive(user.getTurn_number() * (user.getPrison_Sentence() > 0 ? -1 : 1));
         }
 
         repository.save(match);
@@ -502,4 +527,187 @@ public class MatchController {
         return ResponseEntity.ok("Dein Zug ist vorbei");
     }
 
+    @GetMapping("/startMatch")
+    public ResponseEntity<?> startMatch(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.ok("In Search");
+        }
+
+        Match match = matches.get(0);
+
+        if (match.getSecondplayer() == null){
+            return ResponseEntity.status(404).body("Es braucht zwei Spieler um zu starten!");
+        }
+
+        match.setIsActive(1);
+
+        repository.save(match);
+
+        return ResponseEntity.ok("Match gestartet");
+    }
+
+    @GetMapping("/surrender")
+    public ResponseEntity<?> surrender(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.ok("In Search");
+        }
+
+        Match match = matches.get(0);
+
+        if (user.getTurn_number() == Math.abs(match.getIsActive()))
+        {
+            int newisActive = (user.getTurn_number() % 4) + 1;
+            User tmpuser = urepository.findByTurnNumber(newisActive);
+
+            while (tmpuser == null || tmpuser.getMoney() <= 0) {
+                newisActive = (newisActive % 4) + 1;
+                tmpuser = urepository.findByTurnNumber(newisActive);
+            }
+            match.setIsActive(newisActive * (urepository.findByTurnNumber(newisActive).getPrison_Sentence() > 0 ? -1 : 1));
+        }
+        User tmpuser = match.getCreater();
+        int count = 0;
+
+        if (match.getCreater() != user && match.getCreater() != null && match.getCreater().getMoney() > 0){
+            count++;
+            tmpuser = match.getCreater();
+        }
+        if (match.getSecondplayer() != user && match.getSecondplayer() != null && match.getSecondplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getSecondplayer();
+        }
+        if (match.getThirdplayer() != user && match.getThirdplayer() != null && match.getThirdplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getThirdplayer();
+        }
+        if (match.getFourthplayer() != user && match.getFourthplayer() != null && match.getFourthplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getFourthplayer();
+        }
+        if (count == 1){
+            match.setWinner(tmpuser);
+        }
+
+        user.setMoney(-1);
+        urepository.save(user);
+        repository.save(match);
+
+        return ResponseEntity.ok("Dein Zug ist vorbei");
+    }
+
+    @GetMapping("/endMatch")
+    public ResponseEntity<?> endMatch(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+
+        Optional<User> userOpt = urepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        List<Match> matches = repository.findByCreaterOrSecondplayerOrThirdplayerOrFourthplayer(
+                user, user, user, user
+        );
+
+        if (matches.isEmpty()) {
+            return ResponseEntity.ok("In Search");
+        }
+
+        Match match = matches.get(0);
+
+        if (user.getTurn_number() == 1){
+            match.setCreater(null);
+        }
+        else if (user.getTurn_number() == 2){
+            match.setSecondplayer(null);
+        }
+        else if (user.getTurn_number() == 3){
+            match.setThirdplayer(null);
+        }
+        else if (user.getTurn_number() == 4){
+            match.setFourthplayer(null);
+        }
+
+        if (user.getTurn_number() == Math.abs(match.getIsActive()))
+        {
+            int newisActive = (user.getTurn_number() % 4) + 1;
+            User tmpuser = urepository.findByTurnNumber(newisActive);
+
+            while (tmpuser == null || tmpuser.getMoney() <= 0) {
+                newisActive = (newisActive % 4) + 1;
+                tmpuser = urepository.findByTurnNumber(newisActive);
+            }
+            match.setIsActive(newisActive * (urepository.findByTurnNumber(newisActive).getPrison_Sentence() > 0 ? -1 : 1));
+        }
+        User tmpuser = match.getCreater();
+        int count = 0;
+
+        if (match.getCreater() != user && match.getCreater() != null && match.getCreater().getMoney() > 0){
+            count++;
+            tmpuser = match.getCreater();
+        }
+        if (match.getSecondplayer() != user && match.getSecondplayer() != null && match.getSecondplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getSecondplayer();
+        }
+        if (match.getThirdplayer() != user && match.getThirdplayer() != null && match.getThirdplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getThirdplayer();
+        }
+        if (match.getFourthplayer() != user && match.getFourthplayer() != null && match.getFourthplayer().getMoney() > 0){
+            count++;
+            tmpuser = match.getFourthplayer();
+        }
+        if (count == 1){
+            match.setWinner(tmpuser);
+        }
+        repository.save(match);
+        user.setMoney(0);
+        user.setFigure(0);
+        user.setPosition(0);
+        user.setTurn_number(0);
+        user.setPrison_Sentence(0);
+        urepository.save(user);
+
+        return ResponseEntity.ok("Dein Zug ist vorbei");
+    }
 }
